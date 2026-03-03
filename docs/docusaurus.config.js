@@ -47,24 +47,9 @@ const config = {
 			({
 				docs: {
 					sidebarPath: "./sidebars.js",
-					// Please change this to your repo.
-					// Remove this to remove the "edit this page" links.
-					editUrl: "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/",
+					// removed edit links for minimalism
 				},
-				blog: {
-					showReadingTime: true,
-					feedOptions: {
-						type: ["rss", "atom"],
-						xslt: true,
-					},
-					// Please change this to your repo.
-					// Remove this to remove the "edit this page" links.
-					editUrl: "https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/",
-					// Useful options to enforce blogging best practices
-					onInlineTags: "warn",
-					onInlineAuthors: "warn",
-					onUntruncatedBlogPosts: "warn",
-				},
+				blog: false, // disable blog to strip default template content
 				theme: {
 					customCss: "./src/css/custom.css",
 				},
@@ -78,12 +63,12 @@ const config = {
 			// Replace with your project's social card
 			image: "img/docusaurus-social-card.jpg",
 			colorMode: {
-				respectPrefersColorScheme: true,
+				respectPrefersColorScheme: false,
 			},
 			navbar: {
-				title: "My Site",
+				title: "Instagram Archive Viewer",
 				logo: {
-					alt: "My Site Logo",
+					alt: "IAV Logo",
 					src: "img/logo.svg",
 				},
 				items: [
@@ -91,60 +76,31 @@ const config = {
 						type: "docSidebar",
 						sidebarId: "tutorialSidebar",
 						position: "left",
-						label: "Tutorial",
+						label: "Docs",
 					},
-					{ to: "/blog", label: "Blog", position: "left" },
 					{
-						href: "https://github.com/facebook/docusaurus",
-						label: "GitHub",
+						to: "/docs/tutorial-basics/downloading-data",
+						label: "Install",
+						position: "left",
+					},
+					{
+						to: "/docs/instagram-archive-viewer/usage",
+						label: "IAV",
+						position: "left",
+					},
+					{
+						href: "https://github.com/AvesonThyBot/instagram-archive-viewer",
 						position: "right",
+						className: "header-github-link",
+						"aria-label": "GitHub repository",
 					},
 				],
 			},
+
 			footer: {
 				style: "dark",
-				links: [
-					{
-						title: "Docs",
-						items: [
-							{
-								label: "Tutorial",
-								to: "/docs/intro",
-							},
-						],
-					},
-					{
-						title: "Community",
-						items: [
-							{
-								label: "Stack Overflow",
-								href: "https://stackoverflow.com/questions/tagged/docusaurus",
-							},
-							{
-								label: "Discord",
-								href: "https://discordapp.com/invite/docusaurus",
-							},
-							{
-								label: "X",
-								href: "https://x.com/docusaurus",
-							},
-						],
-					},
-					{
-						title: "More",
-						items: [
-							{
-								label: "Blog",
-								to: "/blog",
-							},
-							{
-								label: "GitHub",
-								href: "https://github.com/facebook/docusaurus",
-							},
-						],
-					},
-				],
-				copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+				links: [],
+				copyright: `Copyright © ${new Date().getFullYear()} Instagram Archive Viewer.`,
 			},
 			prism: {
 				theme: prismThemes.github,

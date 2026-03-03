@@ -2,46 +2,58 @@
 sidebar_position: 1
 ---
 
-# Tutorial Intro
+# Welcome to Instagram Archive Viewer Docs
 
-Let's discover **Docusaurus in less than 5 minutes**.
+This documentation accompanies the **Instagram Archive Viewer** project – a lightweight web
+interface for exploring exported Instagram chat history in a readable, searchable format.
 
-## Getting Started
+### Why this exists
 
-Get started by **creating a new site**.
+Instagram provides no built‑in way to restore or analyse old conversations once they have been
+deleted. This tool lets you work from an official JSON export, giving you full local control over
+your data and a speedy search experience that mimics the native app.
 
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
+The viewer was originally created to recover lost chats after an account was wiped, but it has
+since evolved into a general‑purpose archive browser with features such as perspective toggling,
+message grouping, and media previews.
 
-### What you'll need
+Here you'll find guides on how to prepare your data, import archives, and customize the viewer
+for your needs. The docs are organized into folders; use the dropdown in the navbar (now labeled
+"Docs") to navigate between sections.
 
-- [Node.js](https://nodejs.org/en/download/) version 20.0 or above:
-  - When installing Node.js, you are recommended to check all checkboxes related to dependencies.
+## Getting started
 
-## Generate a new site
+1. Request your Instagram data export as **JSON** (messages only).
+2. Place the download in the `public/data` folder or run the `install.sh` helper script.
+3. Launch the application:
 
-Generate a new Docusaurus site using the **classic template**.
+   ```bash
+   cd instagram-archive-viewer
+   npm install     # first run
+   npm run dev
+   ```
 
-The classic template will automatically be added to your project after you run the command:
+   Open the URL shown in your terminal (typically `http://localhost:5173`).
 
-```bash
-npm init docusaurus@latest my-website classic
-```
+## Need help?
 
-You can type this command into Command Prompt, Powershell, Terminal, or any other integrated terminal of your code editor.
+- The **Installation** section in the sidebar covers downloading data, using the script, and
+  launching the project.
+- If you encounter problems, the **Troubleshooting** page under the “Instagram Archive Viewer”
+  category will walk you through common fixes.
+- For contributors or developers, check the **Community** folder for guidelines, FAQs, and notes.
+  Note that the **Community** category now lives at the top level of the sidebar rather
+  than under the Instagram Archive Viewer section; it contains contribution instructions,
+  a FAQ, and dev notes.
 
-The command also installs all necessary dependencies you need to run Docusaurus.
+## Tips & best practices
 
-## Start your site
+- Your data never leaves your computer – everything runs locally in the browser.
+- Style adjustments belong in `src/css/custom.css`; the minimal theme keeps only necessary
+  elements so your custom CSS has priority.
+- Organize future docs using subfolders; the sidebar will auto‑generate a dropdown list.
 
-Run the development server:
+---
 
-```bash
-cd my-website
-npm run start
-```
-
-The `cd` command changes the directory you're working with. In order to work with your newly created Docusaurus site, you'll need to navigate the terminal there.
-
-The `npm run start` command builds your website locally and serves it through a development server, ready for you to view at http://localhost:3000/.
-
-Open `docs/intro.md` (this page) and edit some lines: the site **reloads automatically** and displays your changes.
+_Start by selecting a section from the sidebar above, or review the “Installation” guide to get
+up and running._

@@ -1,0 +1,8 @@
+{
+  "label": "Installation",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Steps to download your data, prepare it, and run the viewer."
+  }
+}
