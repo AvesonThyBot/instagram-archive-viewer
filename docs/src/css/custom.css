@@ -1,0 +1,62 @@
+/**
+ * Modern Minimalist Theme - Clean & Simple
+ */
+
+/* Light Mode: Slate & Indigo */
+:root {
+	--ifm-color-primary: #3f51b5; /* Indigo */
+	--ifm-color-primary-dark: #3949ab;
+	--ifm-color-primary-darker: #303f9f;
+	--ifm-color-primary-darkest: #1a237e;
+	--ifm-color-primary-light: #5c6bc0;
+	--ifm-color-primary-lighter: #7986cb;
+	--ifm-color-primary-lightest: #9fa8da;
+
+	--ifm-background-color: #ffffff;
+	--ifm-navbar-background-color: #ffffff;
+	--ifm-code-font-size: 90%;
+	--docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark Mode: Deep Charcoal & Soft Blue */
+[data-theme="dark"] {
+	--ifm-color-primary: #818cf8; /* Soft Indigo */
+	--ifm-color-primary-dark: #6366f1;
+	--ifm-color-primary-darker: #4f46e5;
+	--ifm-color-primary-darkest: #3730a3;
+	--ifm-color-primary-light: #a5b4fc;
+	--ifm-color-primary-lighter: #c7d2fe;
+	--ifm-color-primary-lightest: #e0e7ff;
+
+	/* Use a dark charcoal instead of pure black for better readability */
+	--ifm-background-color: #0f172a;
+	--ifm-navbar-background-color: #1e293b;
+	--ifm-card-background-color: #1e293b;
+
+	--docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.1);
+
+	--ifm-toc-border-color: #334155;
+	--ifm-contents-border-color: #334155;
+}
+
+/* Cleaner UI Elements */
+.navbar {
+	box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+code {
+	background-color: rgba(63, 81, 181, 0.1);
+	border: 1px solid rgba(63, 81, 181, 0.2);
+	padding: 2px 4px;
+	border-radius: 6px;
+	font-family: "Fira Code", monospace;
+}
+
+[data-theme="dark"] code {
+	background-color: rgba(129, 140, 248, 0.1);
+	border: 1px solid rgba(129, 140, 248, 0.2);
+}
+
+.admonition {
+	border-radius: 8px;
+}
