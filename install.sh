@@ -1,98 +1,119 @@
 #!/bin/bash
 
-# --- Instagram Archive Viewer Installer ---
-# Usage: ./install.sh {path/to/export/folder} {path/to/archive-viewer/folder}
+# --- Instagram Archive Viewer: Unified Installer ---
+# Usage: ./install.sh {optional: path/of/zip/folder}
 
-# Assign arguments to variables
-EXPORT_PATH=$1
-VIEWER_PATH=$2
+REPO_PATH=$(pwd)/instagram-archive-viewer
+TARGET_DATA_DIR="$REPO_PATH/public/data"
 
-# Colors for terminal output
+# Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-echo "------------------------------------------"
-echo "Instagram Archive Viewer: Data Importer"
-echo "------------------------------------------"
+echo -e "${CYAN}------------------------------------------${NC}"
+echo -e "${CYAN}Instagram Archive Viewer: Unified Setup${NC}"
+echo -e "${CYAN}------------------------------------------${NC}"
 
-# 1. Check if both arguments are provided
-if [ -z "$EXPORT_PATH" ] || [ -z "$VIEWER_PATH" ]; then
-    echo -e "${RED}Error: Missing arguments.${NC}"
-    echo "Usage: ./install.sh <export_path> <repo_path>"
+#  Validation: Path Input
+ZIP_SOURCE_DIR=$1
+
+# If no argument was provided, ask once and mention arguments
+if [ -z "$ZIP_SOURCE_DIR" ]; then
+    echo -e "${YELLOW}Tip: You can skip this prompt next time by passing the path as an argument:${NC}"
+    echo -e "${CYAN}Usage: ./install.sh /path/to/zips${NC}\n"
+    
+    echo -n "Please enter the folder path containing your Instagram ZIP files: "
+    read -r ZIP_SOURCE_DIR
+fi
+
+# Clean up trailing slashes
+ZIP_SOURCE_DIR=$(echo "$ZIP_SOURCE_DIR" | sed 's:/*$::')
+
+# Final check: If it's still empty or not a directory, exit
+if [ -z "$ZIP_SOURCE_DIR" ] || [ ! -d "$ZIP_SOURCE_DIR" ]; then
+    echo -e "${RED}Error: Directory '$ZIP_SOURCE_DIR' not found or not provided.${NC}"
     exit 1
 fi
 
-# 2. Path Validation
-if [ ! -d "$EXPORT_PATH" ]; then
-    echo -e "${RED}Error: Export folder not found at: $EXPORT_PATH${NC}"
-    echo "Please move the folder to be in the same directory as the cloned repo and try again."
-    exit 1
+# Bright Warning Message
+echo -e "\n${YELLOW}*******************************************************************"
+echo -e "IMPORTANT: Put all Instagram export zip files into a single folder"
+echo -e "*******************************************************************${NC}\n"
+
+# User Confirmation
+read -p "Do you want to progress with the extraction? (y/n): " CONFIRM
+if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
+    echo "Setup cancelled by user."
+    exit 0
 fi
 
-if [ ! -d "$VIEWER_PATH" ]; then
-    echo -e "${RED}Error: Viewer folder not found at: $VIEWER_PATH${NC}"
-    echo "Please ensure the path to your archive-viewer project is correct."
-    exit 1
-fi
-
-# Convert to absolute paths
-ABS_EXPORT_PATH=$(cd "$(dirname "$EXPORT_PATH")" && pwd)/$(basename "$EXPORT_PATH")
-ABS_VIEWER_PATH=$(cd "$(dirname "$VIEWER_PATH")" && pwd)/$(basename "$VIEWER_PATH")
-
-echo -e "${GREEN}Valid Paths Confirmed:${NC}"
-echo "Source: $ABS_EXPORT_PATH"
-echo "Target: $ABS_VIEWER_PATH"
-echo "------------------------------------------"
-
-# 3. Ask user for Copy or Cut
-echo -e "${YELLOW}Media Handling:${NC}"
-echo "1) Copy files (Keep original export intact)"
-echo "2) Cut/Move files (Save disk space, deletes from source)"
-read -p "Select an option [1-2]: " ACTION_CHOICE
-
-# 4. Define Internal Paths
-INBOX_PATH="$ABS_EXPORT_PATH/your_instagram_activity/messages/inbox"
-TARGET_DATA_DIR="$ABS_VIEWER_PATH/public/data"
-
-if [ ! -d "$INBOX_PATH" ]; then
-    echo -e "${RED}Error: Could not find the 'inbox' folder within the export.${NC}"
-    echo "Expected path: $INBOX_PATH"
-    exit 1
-fi
-
+# Folder Merge: Preparation
 mkdir -p "$TARGET_DATA_DIR"
+# Get absolute path for source to avoid issues when changing directories
+ABS_ZIP_DIR=$(cd "$ZIP_SOURCE_DIR" && pwd)
+cd "$ABS_ZIP_DIR" || exit
 
-# 5. Loop through each chat folder in the inbox
-for chat_folder in "$INBOX_PATH"/*; do
-    if [ -d "$chat_folder" ]; then
-        FOLDER_NAME=$(basename "$chat_folder")
-        USER_DIR="$TARGET_DATA_DIR/$FOLDER_NAME"
-        
-        echo -e "\n${GREEN}Processing User: $FOLDER_NAME${NC}"
-        mkdir -p "$USER_DIR"
+ZIP_FILES=(*.zip)
+TOTAL_ZIPS=${#ZIP_FILES[@]}
 
-        # Run the merge script (Reverse files, fix unicode, minify)
-        node "$ABS_VIEWER_PATH/scripts/merge.js" "$chat_folder" "$USER_DIR/combined.json"
+if [ "$TOTAL_ZIPS" -eq 0 ]; then
+    echo -e "${RED}Error: No .zip files found in $ABS_ZIP_DIR${NC}"
+    exit 1
+fi
 
-        # Handle Media Assets
-        if [ "$ACTION_CHOICE" == "2" ]; then
-            # Move media if folders exist
-            [ -d "$chat_folder/photos" ] && mv "$chat_folder/photos" "$USER_DIR/"
-            [ -d "$chat_folder/videos" ] && mv "$chat_folder/videos" "$USER_DIR/"
-            [ -d "$chat_folder/audio" ] && mv "$chat_folder/audio" "$USER_DIR/"
-        else
-            # Copy media if folders exist
-            [ -d "$chat_folder/photos" ] && cp -r "$chat_folder/photos" "$USER_DIR/"
-            [ -d "$chat_folder/videos" ] && cp -r "$chat_folder/videos" "$USER_DIR/"
-            [ -d "$chat_folder/audio" ] && cp -r "$chat_folder/audio" "$USER_DIR/"
-        fi
-    fi
+# Folder Merge: Extraction Phase
+echo "Step 1: Extracting $TOTAL_ZIPS archives..."
+for ((i=0; i<TOTAL_ZIPS; i++)); do
+    zipfile="${ZIP_FILES[$i]}"
+    echo -n "[$(($i+1))/$TOTAL_ZIPS] Extracting $zipfile... "
+    
+    # Extract directly to the target project folder
+    # Use a temp subfolder to prevent collisions during the unzip process
+    unzip -q "$zipfile" -d "$TARGET_DATA_DIR/temp_${zipfile%.*}"
+    echo "Done."
 done
 
-echo -e "\n------------------------------------------"
-echo -e "${GREEN}SUCCESS!${NC} All chats have been merged and minified."
-echo "You can now view them in the dashboard."
-echo "------------------------------------------"
-exit 0
+# Folder Merge: Unification Phase
+echo "Step 2: Unifying data into public/data/your_instagram_activity..."
+cd "$TARGET_DATA_DIR" || exit
+
+TEMP_FOLDERS=$(ls -d temp_*/ 2>/dev/null)
+for folder in $TEMP_FOLDERS; do
+    if [ -d "${folder}your_instagram_activity" ]; then
+        # Move content to top level of public/data/
+        cp -rn "${folder}your_instagram_activity" .
+    fi
+    rm -rf "$folder"
+done
+
+# JSON Merge: Processing Phase (Minification)
+echo -e "\nStep 3: Minifying JSON files and optimizing space..."
+if [ -f "$REPO_PATH/scripts/jsonMerge.js" ]; then
+    node "$REPO_PATH/scripts/jsonMerge.js" "$TARGET_DATA_DIR/your_instagram_activity"
+else
+    echo -e "${RED}Warning: scripts/jsonMerge.js not found. Skipping minification.${NC}"
+fi
+
+# Final Stats
+END_TIME=$(date +%s)
+DURATION=$((END_TIME - START_TIME))
+
+# Format duration into minutes and seconds
+MINUTES=$((DURATION / 60))
+SECONDS=$((DURATION % 60))
+
+FINAL_SIZE=$(du -sh "$TARGET_DATA_DIR" | awk '{print $1}')
+FILE_COUNT=$(find "$TARGET_DATA_DIR" -type f | wc -l | xargs)
+
+echo "------------------------------------------------"
+echo -e "${GREEN}Setup Completed Successfully!${NC}"
+echo "Stats:"
+echo "   - Archives Processed: $TOTAL_ZIPS"
+echo "   - Final Data Size: $FINAL_SIZE"
+echo "   - Total Files in public/data: $FILE_COUNT"
+echo "   - Time Elapsed: ${MINUTES}m ${SECONDS}s"
+echo "------------------------------------------------"
+echo "Your data is ready in: $TARGET_DATA_DIR"
