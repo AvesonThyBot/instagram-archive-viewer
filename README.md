@@ -1,4 +1,4 @@
-# Instagram Archive Viewer
+# Instagram Archives Viewer
 
 A clean, easy-to-use web interface for viewing exported Instagram chat history. This project takes raw JSON data and turns it into a readable, searchable archive that looks and feels like the native app.
 
