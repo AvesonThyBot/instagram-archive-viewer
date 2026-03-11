@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "json-merger": "^3.0.0",
+    "jsonminify": "^0.4.2"
+  }
+}
