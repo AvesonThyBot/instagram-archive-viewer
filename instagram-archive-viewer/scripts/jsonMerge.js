@@ -1,138 +1,187 @@
-import fs from 'fs';
-import path from 'path';
-import { createRequire } from 'module';
-
-const require = createRequire(import.meta.url);
-const jsonminify = require('jsonminify');
+import fs from "fs";
+import path from "path";
+import readline from "readline";
 
 const targetDir = process.argv[2];
 
-if (!targetDir) {
-  console.error('Usage: node jsonMerge.js <directory>');
-  process.exit(1);
+let stats = {
+	originalSize: 0,
+	compressedSize: 0,
+	chatsProcessed: 0,
+};
+
+// ----- Helper Functions -----
+
+// fixEncoding(): fixes broken emojis and special characters
+function fixEncoding(obj) {
+	if (typeof obj === "string") {
+		try {
+			return Buffer.from(obj, "latin1").toString("utf8");
+		} catch (e) {
+			return obj;
+		}
+	}
+	if (Array.isArray(obj)) return obj.map(fixEncoding);
+	if (obj !== null && typeof obj === "object") {
+		const newObj = {};
+		for (const key in obj) {
+			newObj[fixEncoding(key)] = fixEncoding(obj[key]);
+		}
+		return newObj;
+	}
+	return obj;
 }
 
-// Recursively walks through a directory and executes a callback for each file
-function walk(dir, callback) {
-  const files = fs.readdirSync(dir);
-  for (const file of files) {
-    const filePath = path.join(dir, file);
-    if (fs.statSync(filePath).isDirectory()) {
-      walk(filePath, callback);
-    } else {
-      callback(filePath);
-    }
-  }
+// formatBytes(): changes raw numbers into readable sizes like MB
+function formatBytes(bytes) {
+	if (bytes === 0) return "0 Bytes";
+	const k = 1024;
+	const sizes = ["Bytes", "KB", "MB", "GB"];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-// Fixes Instagram's specific encoding issue where UTF-8 bytes are treated as Latin-1
-function fixEncoding(str) {
-  if (typeof str !== 'string') return str;
-  try {
-    return Buffer.from(str, 'latin1').toString('utf8');
-  } catch (e) {
-    return str;
-  }
+// confirmUnification(): asks the user to type y or n before deleting files
+async function confirmUnification() {
+	const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+	return new Promise((resolve) => {
+		rl.question(`\nPROMPT: Ready to unify and DELETE original message parts? (y/n): `, (ans) => {
+			rl.close();
+			resolve(ans.toLowerCase() === "y");
+		});
+	});
 }
 
-// Recursively applies encoding fix to all strings in an object
-function fixObjectEncoding(obj) {
-  if (typeof obj === 'string') {
-    return fixEncoding(obj);
-  } else if (Array.isArray(obj)) {
-    return obj.map(fixObjectEncoding);
-  } else if (obj !== null && typeof obj === 'object') {
-    const newObj = {};
-    for (const key in obj) {
-      newObj[fixEncoding(key)] = fixObjectEncoding(obj[key]);
-    }
-    return newObj;
-  }
-  return obj;
+// ----- Core Logic Functions -----
+
+// getChatFolders(): looks for all folders inside the inbox
+function getChatFolders(inboxPath) {
+	return fs
+		.readdirSync(inboxPath)
+		.map((f) => path.join(inboxPath, f))
+		.filter((f) => fs.statSync(f).isDirectory());
 }
 
-console.log(`\n[*] Starting data optimization in: ${targetDir}`);
+// processChat(): joins all message_X.json files into one messages.json file
+function processChat(dir, index, total) {
+	const chatName = path.basename(dir);
+	const outputPath = path.join(dir, "messages.json");
 
-// 1. Group message_*.json files by directory
-const chatGroups = {};
+	const messageFiles = fs
+		.readdirSync(dir)
+		.filter((f) => f.startsWith("message_") && f.endsWith(".json"))
+		.map((f) => path.join(dir, f))
+		.sort((a, b) => {
+			const nA = parseInt(path.basename(a).match(/\d+/)[0]);
+			const nB = parseInt(path.basename(b).match(/\d+/)[0]);
+			return nA - nB;
+		});
 
-walk(targetDir, (filePath) => {
-  const fileName = path.basename(filePath);
-  if (fileName.startsWith('message_') && fileName.endsWith('.json')) {
-    const dir = path.dirname(filePath);
-    if (!chatGroups[dir]) chatGroups[dir] = [];
-    chatGroups[dir].push(filePath);
-  }
-});
+	console.log(`// [${index + 1}/${total}] Current Chat: ${chatName}`);
 
-// 2. Merge message_*.json files in each chat directory
-for (const dir in chatGroups) {
-  const files = chatGroups[dir].sort((a, b) => {
-    const matchA = path.basename(a).match(/\d+/);
-    const matchB = path.basename(b).match(/\d+/);
-    const nA = matchA ? parseInt(matchA[0], 10) : 0;
-    const nB = matchB ? parseInt(matchB[0], 10) : 0;
-    return nA - nB;
-  });
+	try {
+		let finalData = null;
+		let allMessages = [];
+		stats.chatsProcessed++;
 
-  const relativeDir = path.relative(targetDir, dir);
-  console.log(`  -> Merging ${files.length} parts for chat: ${relativeDir}`);
+		if (messageFiles.length > 0) {
+			messageFiles.forEach((file, fIndex) => {
+				stats.originalSize += fs.statSync(file).size;
+				process.stdout.write(`   -> Reading Part ${fIndex + 1}/${messageFiles.length}... \r`);
 
-  try {
-    let combinedData = null;
+				const content = JSON.parse(fs.readFileSync(file, "utf8"));
 
-    for (let i = 0; i < files.length; i++) {
-      const fileContent = fs.readFileSync(files[i], 'utf8');
-      const data = JSON.parse(fileContent);
+				if (!finalData) {
+					finalData = content;
+					allMessages = content.messages || [];
+				} else {
+					if (content.messages && Array.isArray(content.messages)) {
+						allMessages.push(...content.messages);
+					}
+				}
+			});
 
-      if (i === 0) {
-        combinedData = data;
-      } else if (data.messages && Array.isArray(data.messages)) {
-        if (combinedData.messages && Array.isArray(combinedData.messages)) {
-          combinedData.messages = combinedData.messages.concat(data.messages);
-        }
-      }
-      
-      // Remove the original part file to save space
-      fs.unlinkSync(files[i]);
-    }
+			finalData.messages = allMessages;
+			process.stdout.write(" ".repeat(60) + "\r");
+		}
 
-    if (combinedData) {
-      // Apply encoding fix to the merged data
-      combinedData = fixObjectEncoding(combinedData);
+		if (finalData) {
+			const cleanedData = fixEncoding(finalData);
 
-      // Save as messages.json
-      const outputPath = path.join(dir, 'messages.json');
-      const jsonString = JSON.stringify(combinedData);
-      
-      // Minify using jsonminify
-      const minified = jsonminify(jsonString);
-      fs.writeFileSync(outputPath, minified);
-    }
-  } catch (err) {
-    console.error(`  [!] Error processing chat in ${dir}:`, err.message);
-  }
+			// --- Output Selection ---
+			// const finalJson = JSON.stringify(cleanedData, null, 2); // Readable
+			const finalJson = JSON.stringify(cleanedData); // Minified
+			// ------------------------
+
+			stats.compressedSize += Buffer.byteLength(finalJson, "utf8");
+			fs.writeFileSync(outputPath, finalJson);
+
+			console.log(`   -> Status: Unified (${allMessages.length} messages captured).`);
+
+			messageFiles.forEach((f) => fs.unlinkSync(f));
+		}
+	} catch (err) {
+		console.log(`\n// Error Processing ${chatName}: ${err.message}`);
+	}
 }
 
-// 3. Minify all other JSON files in the directory tree
-console.log(`\n[*] Minifying remaining JSON files...`);
-let minifiedCount = 0;
+// processExtras(): fixes the text and format of AI and Secret chat files
+function processExtras() {
+	console.log(`// ----- Processing Additional Conversations -----`);
+	const extraFiles = ["ai_conversations.json", "reported_conversations.json", "secret_conversations.json"];
 
-walk(targetDir, (filePath) => {
-  if (filePath.endsWith('.json') && path.basename(filePath) !== 'messages.json') {
-    try {
-      const content = fs.readFileSync(filePath, 'utf8');
-      // Only process if it looks like it's not minified
-      if (content.includes('\n') || content.includes('  ')) {
-        const minified = jsonminify(content);
-        fs.writeFileSync(filePath, minified);
-        minifiedCount++;
-      }
-    } catch (err) {
-      console.error(`  [!] Could not minify ${filePath}:`, err.message);
-    }
-  }
-});
+	extraFiles.forEach((file) => {
+		const fullPath = path.join(targetDir, "messages", file);
+		if (fs.existsSync(fullPath)) {
+			try {
+				stats.originalSize += fs.statSync(fullPath).size;
+				const content = JSON.parse(fs.readFileSync(fullPath, "utf8"));
+				const cleaned = fixEncoding(content);
 
-console.log(`  -> Minified ${minifiedCount} additional files.`);
-console.log('\n[+] Data optimization and unification complete!');
+				const formatted = JSON.stringify(cleaned, null, 2);
+				stats.compressedSize += Buffer.byteLength(formatted, "utf8");
+				fs.writeFileSync(fullPath, formatted);
+				console.log(`   -> Optimized: ${file}`);
+			} catch (e) {}
+		}
+	});
+}
+
+// ----- Execution Flow -----
+
+// run(): starts the script and runs the other functions in order
+async function run() {
+	if (!targetDir || !fs.existsSync(targetDir)) {
+		console.error("// Error: Valid target directory path is required.");
+		process.exit(1);
+	}
+
+	const inboxPath = path.join(targetDir, "messages", "inbox");
+	if (!fs.existsSync(inboxPath)) {
+		console.error("// Error: Inbox folder not found.");
+		process.exit(1);
+	}
+
+	const folders = getChatFolders(inboxPath);
+
+	const proceed = await confirmUnification();
+	if (!proceed) {
+		console.log("Unification aborted.");
+		process.exit(0);
+	}
+
+	console.log(`\n// ----- Starting Optimization: ${folders.length} Folders Found -----`);
+	folders.forEach((dir, index) => processChat(dir, index, folders.length));
+
+	processExtras();
+
+	// ----- Final Stats Block -----
+	const saved = stats.originalSize - stats.compressedSize;
+	console.log("\n------------------------------------------------");
+	console.log(`Optimization Results:`);
+	console.log(`   - Total Chats: ${stats.chatsProcessed}`);
+	console.log(`   - Data Size: ${formatBytes(stats.originalSize)} -> ${formatBytes(stats.compressedSize)}`);
+	console.log("------------------------------------------------\n");
+}
+
+run();
