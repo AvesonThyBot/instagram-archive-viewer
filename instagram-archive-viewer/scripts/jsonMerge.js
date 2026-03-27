@@ -109,8 +109,13 @@ function processChat(dir, index, total) {
 			const cleanedData = fixEncoding(finalData);
 
 			// --- Output Selection ---
+<<<<<<< HEAD
 			// const finalJson = JSON.stringify(cleanedData, null, 2); // Readable
 			const finalJson = JSON.stringify(cleanedData); // Minified
+=======
+			const finalJson = JSON.stringify(cleanedData, null, 2); // Readable
+			// const finalJson = JSON.stringify(cleanedData); // Minified
+>>>>>>> f895953f74c46f3d9a51c9aacf4293e74a3387f7
 			// ------------------------
 
 			stats.compressedSize += Buffer.byteLength(finalJson, "utf8");
