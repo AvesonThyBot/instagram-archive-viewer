@@ -129,6 +129,17 @@ else
     exit 1
 fi
 
+# // ----- Inbox Index Phase -----
+echo -e "\n${CYAN}Building your inbox list for the desktop-style DM view...${NC}"
+if [ -f "$REPO_PATH/scripts/buildInboxIndex.js" ]; then
+    echo -e "   ${YELLOW}Reading each conversation and finding the latest message for every person...${NC}"
+    node "$REPO_PATH/scripts/buildInboxIndex.js" "$TARGET_DATA_DIR/your_instagram_activity"
+    echo -e "${GREEN}   Inbox data prepared successfully.${NC}"
+else
+    echo -e "${RED}Error: scripts/buildInboxIndex.js not found.${NC}"
+    exit 1
+fi
+
 # // ----- Silent Package Installation (Final Step) -----
 cd "$REPO_PATH" || exit
 if [ -f "package.json" ]; then
