@@ -1,15 +1,15 @@
 import React from 'react';
 import { Routes, Route, Navigate } from "react-router-dom";
-import ChatPage from './webpages/index';
+import Inbox from './webpages/inbox';
 
 function App() {
   return (
     <div className="fixed inset-0 bg-black text-white font-sans overflow-hidden select-none">
+      {/* Keep routing minimal so the inbox shell can own both the sidebar and chat layout. */}
       <Routes>
-        {/* Main Chat Route */}
-        <Route path="/" element={<ChatPage />} />
+        <Route path="/" element={<Inbox />} />
+        <Route path="/chat/:threadId" element={<Inbox />} />
 
-        {/* Fallback redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </div>
