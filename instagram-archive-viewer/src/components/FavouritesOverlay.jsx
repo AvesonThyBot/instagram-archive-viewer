@@ -33,7 +33,7 @@ const FavouritesOverlay = ({ isOpen, onClose, favourites, onSelectMessage }) => 
                   <button
                     key={message.message_id}
                     type="button"
-                    onClick={() => onSelectMessage?.(message.message_id)}
+                    onClick={() => onSelectMessage?.(message)}
                     className="w-full rounded-3xl border border-white/10 bg-white/[0.04] p-4 text-left transition hover:bg-white/[0.08]"
                   >
                     <div className="mb-2 flex items-center justify-between gap-3">

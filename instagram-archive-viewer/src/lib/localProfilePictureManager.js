@@ -6,66 +6,8 @@ const ACCEPTED_MIME_TYPES = new Set([
   'image/gif',
 ]);
 
-// Local avatar uploads use the File System Access API so files can be written straight into public/assets.
-function sanitizeBaseName(value) {
-  return (value || 'profile')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48) || 'profile';
-}
-
-function getExtensionFromFile(file) {
-  const mimeExtension = {
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp',
-    'image/gif': 'gif',
-  }[file.type];
-
-  if (mimeExtension) {
-    return mimeExtension;
-  }
-
-  const fileExtension = file.name.split('.').pop()?.toLowerCase();
-  return fileExtension || 'png';
-}
-
-async function getFileHandle(parentHandle, name, options = {}) {
-  return parentHandle.getFileHandle(name, options);
-}
-
-async function getDirectoryHandle(parentHandle, name, options = {}) {
-  return parentHandle.getDirectoryHandle(name, options);
-}
-
-async function writeJsonFile(fileHandle, value) {
-  const writer = await fileHandle.createWritable();
-  await writer.write(JSON.stringify(value, null, 2));
-  await writer.close();
-}
-
-async function writeBinaryFile(fileHandle, file) {
-  const writer = await fileHandle.createWritable();
-  await writer.write(await file.arrayBuffer());
-  await writer.close();
-}
-
-async function resolveProjectFiles(projectRootHandle) {
-  const appDirHandle = await getDirectoryHandle(projectRootHandle, 'instagram-archive-viewer');
-  const publicDirHandle = await getDirectoryHandle(appDirHandle, 'public');
-  const assetsDirHandle = await getDirectoryHandle(publicDirHandle, 'assets', { create: true });
-  const dataDirHandle = await getDirectoryHandle(publicDirHandle, 'data');
-  const activityDirHandle = await getDirectoryHandle(dataDirHandle, 'your_instagram_activity');
-  const messagesDirHandle = await getDirectoryHandle(activityDirHandle, 'messages');
-  const inboxIndexHandle = await getFileHandle(messagesDirHandle, 'inbox_index.json');
-
-  return {
-    assetsDirHandle,
-    inboxIndexHandle,
-  };
-}
-
+// Uploads are proxied through the local dev server so the app can write into public/assets/upload
+// without asking the user to manually pick project folders for every image.
 export function getMissingProfileConversations(indexData) {
   return (indexData?.conversations || []).filter((conversation) => {
     const imageUri = conversation.imageUri || '';
@@ -89,38 +31,42 @@ export function validateProfilePictureFile(file) {
   return '';
 }
 
-export async function persistProfilePicture({
-  projectRootHandle,
-  indexData,
-  threadId,
-  displayName,
-  file,
-}) {
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Could not read that image file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function uploadProfilePicture({ indexData, threadId, displayName, file }) {
   const validationError = validateProfilePictureFile(file);
   if (validationError) {
     throw new Error(validationError);
   }
 
-  const { assetsDirHandle, inboxIndexHandle } = await resolveProjectFiles(projectRootHandle);
-  const nextIndexData = structuredClone(indexData);
-  const targetConversation = nextIndexData.conversations?.find((conversation) => conversation.threadId === threadId);
+  const dataUrl = await readFileAsDataUrl(file);
+  const response = await fetch('/api/profile-picture', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      indexData,
+      threadId,
+      displayName,
+      fileName: file.name,
+      mimeType: file.type,
+      dataUrl,
+    }),
+  });
 
-  if (!targetConversation) {
-    throw new Error('Could not find that conversation in the inbox index.');
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Could not save that profile picture.');
   }
 
-  const extension = getExtensionFromFile(file);
-  const fileName = `${sanitizeBaseName(displayName)}-${threadId}.${extension}`;
-  const imageHandle = await getFileHandle(assetsDirHandle, fileName, { create: true });
-
-  await writeBinaryFile(imageHandle, file);
-
-  targetConversation.imageUri = `/assets/${fileName}`;
-  await writeJsonFile(inboxIndexHandle, nextIndexData);
-
-  return {
-    nextIndexData,
-    imageUri: targetConversation.imageUri,
-    fileName,
-  };
+  return payload;
 }

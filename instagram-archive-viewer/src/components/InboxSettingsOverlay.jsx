@@ -1,14 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
-import { FolderOpen, ImagePlus, LoaderCircle } from 'lucide-react';
+import { ImagePlus, LoaderCircle } from 'lucide-react';
 import ActionPanelOverlay from './ActionPanelOverlay';
 import {
   getMissingProfileConversations,
-  persistProfilePicture,
+  uploadProfilePicture,
 } from '../lib/localProfilePictureManager';
 
 // The settings panel doubles as a manual avatar manager for direct messages that lack exported pfps.
 const InboxSettingsOverlay = ({ isOpen, onClose, indexData, onIndexUpdate }) => {
-  const [projectRootHandle, setProjectRootHandle] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadingThreadId, setUploadingThreadId] = useState('');
@@ -20,22 +19,6 @@ const InboxSettingsOverlay = ({ isOpen, onClose, indexData, onIndexUpdate }) => 
     [indexData],
   );
 
-  async function handlePickProjectFolder() {
-    if (!window.showDirectoryPicker) {
-      setErrorMessage('This browser does not support local folder access yet.');
-      return;
-    }
-
-    try {
-      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-      setProjectRootHandle(handle);
-      setErrorMessage('');
-      setStatusMessage('Project folder connected. You can upload profile pictures now.');
-    } catch {
-      setErrorMessage('Folder access was cancelled.');
-    }
-  }
-
   async function handleUpload(conversation, event) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -44,18 +27,12 @@ const InboxSettingsOverlay = ({ isOpen, onClose, indexData, onIndexUpdate }) => 
       return;
     }
 
-    if (!projectRootHandle) {
-      setErrorMessage('Choose the project folder first so the app can write into public/assets.');
-      return;
-    }
-
     setUploadingThreadId(conversation.threadId);
     setErrorMessage('');
     setStatusMessage('');
 
     try {
-      const { nextIndexData, fileName } = await persistProfilePicture({
-        projectRootHandle,
+      const { nextIndexData, fileName } = await uploadProfilePicture({
         indexData,
         threadId: conversation.threadId,
         displayName: conversation.displayName,
@@ -80,22 +57,12 @@ const InboxSettingsOverlay = ({ isOpen, onClose, indexData, onIndexUpdate }) => 
     >
       <div className="space-y-4">
         <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-white">Local profile picture manager</h3>
-              <p className="mt-1 text-sm text-white/58">
-                Pick the project folder once, then upload JPG, PNG, WEBP, or GIF files up to 4MB.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handlePickProjectFolder}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white transition hover:bg-white/[0.08]"
-            >
-              <FolderOpen className="h-4 w-4" />
-              <span>{projectRootHandle ? 'Reconnect folder' : 'Choose project folder'}</span>
-            </button>
-          </div>
+          <h3 className="text-sm font-semibold text-white">Local profile picture manager</h3>
+          <p className="mt-1 text-sm text-white/58">
+            Upload JPG, PNG, WEBP, or GIF files up to 4MB. They are saved automatically into
+            <span className="mx-1 rounded-full bg-white/[0.06] px-2 py-0.5 text-xs text-white/72">public/assets/upload</span>
+            and the inbox index is updated for you.
+          </p>
 
           {statusMessage ? <p className="mt-3 text-sm text-emerald-300">{statusMessage}</p> : null}
           {errorMessage ? <p className="mt-3 text-sm text-red-300">{errorMessage}</p> : null}

@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   ChevronLeft,
   ChevronRight,
+  ChevronsDown,
   Heart,
   LoaderCircle,
   Palette,
@@ -23,7 +24,6 @@ import { resolveArchiveUri } from '../lib/messageAssets';
 
 const PAGE_SIZE = 100;
 const TIMESTAMP_GAP_MS = 60 * 60 * 1000;
-const OWNER_HANDLE_FALLBACK = 'you';
 
 const CHAT_THEMES = {
   sunset: {
@@ -160,6 +160,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
   const [viewerImage, setViewerImage] = useState('');
   const [favouriteMap, setFavouriteMap] = useState(() => readFavouriteMap());
   const [focusState, setFocusState] = useState(null);
+  const [showLatestButton, setShowLatestButton] = useState(false);
 
   const scrollRef = useRef(null);
   const anchorRestoreRef = useRef(null);
@@ -172,10 +173,10 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
   const groupedMessages = useMemo(() => groupMessages(messages), [messages]);
   const conversationImage = resolveArchiveUri(conversation?.imageUri || '');
   const favouritesForConversation = useMemo(() => {
-    const ids = Object.keys(favouriteMap[conversation?.threadId] || {});
-    const idSet = new Set(ids);
-    return messages.filter((message) => idSet.has(message.message_id));
-  }, [conversation?.threadId, favouriteMap, messages]);
+    return Object.values(favouriteMap[conversation?.threadId] || {}).sort(
+      (a, b) => b.timestamp_ms - a.timestamp_ms,
+    );
+  }, [conversation?.threadId, favouriteMap]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -350,6 +351,9 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
 
   function handleScroll(event) {
     const element = event.currentTarget;
+    const distanceFromLatest = element.scrollHeight - (element.scrollTop + element.clientHeight);
+    setShowLatestButton(distanceFromLatest > 240);
+
     if (element.scrollTop < 160) {
       loadOlderMessages();
     }
@@ -415,6 +419,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
         timestamp_ms: message.timestamp_ms,
         text_content: message.text_content,
         preview_text: message.preview_text,
+        thread_id: threadId,
       };
     }
 
@@ -427,21 +432,47 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
     writeFavouriteMap(nextFavouriteMap);
   }
 
-  function jumpToMessage(messageId) {
+  async function jumpToMessage(message) {
     setShowFavourites(false);
 
-    requestAnimationFrame(() => {
-      if (!scrollRef.current) {
-        return;
-      }
+    const target = scrollRef.current?.querySelector(`[data-message-id="${message.message_id}"]`);
+    if (target && scrollRef.current) {
+      scrollRef.current.scrollTo({
+        top: Math.max(0, target.offsetTop - 120),
+        behavior: 'smooth',
+      });
+      return;
+    }
 
-      const target = scrollRef.current.querySelector(`[data-message-id="${messageId}"]`);
-      if (target) {
-        scrollRef.current.scrollTo({
-          top: Math.max(0, target.offsetTop - 120),
-          behavior: 'smooth',
-        });
-      }
+    setLoadError('');
+    setIsInitialLoading(true);
+    focusMessageIdRef.current = message.message_id;
+
+    try {
+      const context = await getMessageContext(conversation.threadId, message.timestamp_ms, 50, 50);
+      setMessages(context.messages);
+      setHasMoreMessages(context.hasOlder);
+      setFocusState({
+        focusMessageId: message.message_id,
+        hasOlder: context.hasOlder,
+        hasNewer: context.hasNewer,
+      });
+      didScrollToBottomRef.current = false;
+    } catch {
+      setLoadError('Could not load that favourite right now.');
+    } finally {
+      setIsInitialLoading(false);
+    }
+  }
+
+  function scrollToLatest() {
+    if (!scrollRef.current) {
+      return;
+    }
+
+    scrollRef.current.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: 'smooth',
     });
   }
 
@@ -484,7 +515,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
     'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-white/82 shadow-none outline-none transition hover:bg-white/5 focus:outline-none md:h-11 md:w-11';
 
   return (
-    <div className={`flex h-full w-full flex-col ${themeClasses.shell}`}>
+    <div className={`relative flex h-full w-full flex-col ${themeClasses.shell}`}>
       <header
         className={`flex items-center justify-between px-4 py-4 md:px-6 ${themeClasses.header}`}
         onClick={() => setShowInfo(true)}
@@ -586,6 +617,19 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
           ))
         )}
       </div>
+
+      {showLatestButton && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-24 z-20 flex justify-center px-4">
+          <button
+            type="button"
+            onClick={scrollToLatest}
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#12151d]/88 px-4 py-2 text-sm text-white shadow-[0_14px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+          >
+            <ChevronsDown className="h-4 w-4" />
+            <span>Back to latest chat</span>
+          </button>
+        </div>
+      )}
 
       <div className="px-3 pb-3 pt-2 md:px-6 md:pb-5 md:pt-3">
         <div className={`flex items-center gap-1.5 rounded-[30px] px-2 py-2 text-white shadow-[0_18px_40px_rgba(0,0,0,0.22)] md:gap-2 md:px-3 md:py-3 ${themeClasses.composer}`}>
