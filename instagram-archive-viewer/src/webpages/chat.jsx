@@ -192,7 +192,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
   useEffect(() => {
     let isActive = true;
 
-    async function loadInitialConversation() {
+    async function loadLatestConversation() {
       if (!conversation?.threadId) {
         return;
       }
@@ -224,7 +224,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
       }
     }
 
-    loadInitialConversation();
+    loadLatestConversation();
 
     return () => {
       isActive = false;
@@ -465,15 +465,27 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
     }
   }
 
-  function scrollToLatest() {
-    if (!scrollRef.current) {
+  async function scrollToLatest() {
+    if (!conversation?.threadId) {
       return;
     }
 
-    scrollRef.current.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: 'smooth',
-    });
+    setIsInitialLoading(true);
+    setLoadError('');
+    setFocusState(null);
+    setHasMoreMessages(true);
+    didScrollToBottomRef.current = false;
+
+    try {
+      const latestPage = await getConversationMessagePage(conversation.threadId, null, PAGE_SIZE);
+      setMessages(latestPage);
+      setHasMoreMessages(latestPage.length === PAGE_SIZE);
+      setShowLatestButton(false);
+    } catch {
+      setLoadError('Could not return to the latest messages right now.');
+    } finally {
+      setIsInitialLoading(false);
+    }
   }
 
   async function handleSearchResultSelect(result) {
@@ -623,7 +635,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
           <button
             type="button"
             onClick={scrollToLatest}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#12151d]/88 px-4 py-2 text-sm text-white shadow-[0_14px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/18 bg-[#12151d] px-4 py-2 text-sm text-white shadow-[0_14px_32px_rgba(0,0,0,0.22)]"
           >
             <ChevronsDown className="h-4 w-4" />
             <span>Back to latest chat</span>

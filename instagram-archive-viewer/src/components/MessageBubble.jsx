@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { FileText, Heart, Link as LinkIcon, PlayCircle, Radio, Video } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { FileText, Heart, Link as LinkIcon, Pause, Play, PlayCircle, Radio, Video } from 'lucide-react';
 import { getMessagePrimaryAsset, resolveArchiveUri } from '../lib/messageAssets';
 
 // Media tiles fade in from a placeholder so long chats do not flash or shift while scrolling.
@@ -54,6 +54,10 @@ function AttachmentCard({ message, onOpenMedia }) {
     );
   }
 
+  if (message.type === 'audio' && assetUrl) {
+    return <AudioAttachment assetUrl={assetUrl} label={message.text_content || message.preview_text} />;
+  }
+
   const typeIcon = {
     audio: Radio,
     file: FileText,
@@ -83,6 +87,115 @@ function AttachmentCard({ message, onOpenMedia }) {
         </p>
       </div>
     </a>
+  );
+}
+
+function formatAudioTime(seconds) {
+  if (!Number.isFinite(seconds)) {
+    return '0:00';
+  }
+
+  const wholeSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(wholeSeconds / 60);
+  const remainingSeconds = wholeSeconds % 60;
+  return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+}
+
+function AudioAttachment({ assetUrl, label }) {
+  const audioRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return undefined;
+    }
+
+    function handleLoadedMetadata() {
+      setDuration(audio.duration || 0);
+    }
+
+    function handleTimeUpdate() {
+      setCurrentTime(audio.currentTime || 0);
+    }
+
+    function handleEnded() {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      audio.currentTime = 0;
+    }
+
+    function handlePause() {
+      setIsPlaying(false);
+    }
+
+    function handlePlay() {
+      setIsPlaying(true);
+    }
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('pause', handlePause);
+    audio.addEventListener('play', handlePlay);
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('pause', handlePause);
+      audio.removeEventListener('play', handlePlay);
+    };
+  }, [assetUrl]);
+
+  async function togglePlayback() {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    if (audio.paused) {
+      await audio.play();
+    } else {
+      audio.pause();
+    }
+  }
+
+  const progress = duration > 0 ? Math.min(currentTime / duration, 1) * 100 : 0;
+
+  return (
+    <div className="w-full rounded-[24px] border border-white/10 bg-[#2b1516]/85 px-4 py-3 text-white shadow-[0_14px_30px_rgba(0,0,0,0.18)]">
+      <audio ref={audioRef} preload="metadata" src={assetUrl} />
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={togglePlayback}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[#4a2224] text-white"
+          aria-label={isPlaying ? 'Pause audio message' : 'Play audio message'}
+        >
+          {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-[#d5b9ff]">
+            {label || 'Audio message'}
+          </p>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-[#a78bfa] transition-[width] duration-150"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="mt-2 flex items-center justify-between text-xs text-white/60">
+            <span>audio</span>
+            <span>{formatAudioTime(currentTime)} / {formatAudioTime(duration)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
