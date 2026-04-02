@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FileText, Heart, Link as LinkIcon, PlayCircle, Radio, Video } from 'lucide-react';
 import { getMessagePrimaryAsset, resolveArchiveUri } from '../lib/messageAssets';
 
+// Media tiles fade in from a placeholder so long chats do not flash or shift while scrolling.
 function LazyMediaImage({ src, alt, className, imageClassName = '' }) {
   const [loaded, setLoaded] = useState(false);
 
@@ -31,12 +32,12 @@ function AttachmentCard({ message, onOpenMedia }) {
       <button
         type="button"
         onClick={() => onOpenMedia?.(assetUrl)}
-        className="w-full border-0 bg-transparent p-0 shadow-none hover:border-transparent"
+        className="block w-full appearance-none border-0 bg-transparent p-0 shadow-none outline-none hover:border-transparent focus:outline-none"
       >
         <LazyMediaImage
           src={assetUrl}
           alt=""
-          className="max-h-[44svh] w-full rounded-[22px] md:max-h-[52vh] lg:max-h-[58vh]"
+          className="max-h-[34svh] w-full rounded-[22px] md:max-h-[48vh] lg:max-h-[54vh]"
           imageClassName="object-contain bg-black/20"
         />
       </button>
@@ -70,7 +71,7 @@ function AttachmentCard({ message, onOpenMedia }) {
       href={href || '#'}
       target={href ? '_blank' : undefined}
       rel={href ? 'noreferrer' : undefined}
-      className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white"
+      className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white"
     >
       <div className="rounded-full bg-white/10 p-2">
         <Icon className="h-4 w-4" />
@@ -159,7 +160,8 @@ const MessageBubble = ({
             <button
               type="button"
               onClick={() => onToggleFavourite?.(message)}
-              className={`absolute ${isSender ? '-left-9' : '-right-9'} top-1/2 -translate-y-1/2 border-0 bg-transparent p-0 text-white shadow-none hover:border-transparent`}
+              className={`absolute ${isSender ? '-left-8 md:-left-9' : '-right-8 md:-right-9'} top-1/2 -translate-y-1/2 appearance-none border-0 bg-transparent p-0 text-white shadow-none outline-none hover:border-transparent focus:outline-none`}
+              aria-label={isFavourite ? 'Remove favourite' : 'Add favourite'}
             >
               <Heart className={`h-4 w-4 ${isFavourite ? 'fill-[#ff5a7a] text-[#ff5a7a]' : 'text-white/80'}`} />
             </button>

@@ -1,3 +1,4 @@
+// Normalization helpers keep the ingest scripts and inbox index builder aligned on message rules.
 function isReactionNotification(content) {
   if (typeof content !== 'string') {
     return false;

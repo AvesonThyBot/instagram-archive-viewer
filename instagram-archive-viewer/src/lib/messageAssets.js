@@ -10,6 +10,7 @@ export function resolveArchiveUri(uri) {
   return `/data/${uri}`;
 }
 
+// Messages can expose assets either through normalized metadata or legacy flattened columns.
 export function getMessagePrimaryAsset(message) {
   if (Array.isArray(message?.metadata?.attachments) && message.metadata.attachments.length > 0) {
     return message.metadata.attachments[0];

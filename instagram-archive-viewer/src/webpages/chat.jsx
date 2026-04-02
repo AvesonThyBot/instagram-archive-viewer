@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowLeftRight,
   ChevronLeft,
   ChevronRight,
   Heart,
@@ -12,7 +13,12 @@ import MessageBubble from '../components/MessageBubble';
 import MediaViewer from '../components/MediaViewer';
 import SettingsOverlay from '../components/SettingsOverlay';
 import FavouritesOverlay from '../components/FavouritesOverlay';
-import { getConversationMessagePage } from '../lib/sqliteClient';
+import SearchOverlay from '../components/SearchOverlay';
+import {
+  getConversationMessagePage,
+  getMessageContext,
+  getMessagesNewerThan,
+} from '../lib/sqliteClient';
 import { resolveArchiveUri } from '../lib/messageAssets';
 
 const PAGE_SIZE = 100;
@@ -128,9 +134,19 @@ function groupMessages(messages) {
   }, []);
 }
 
+function getSwipeClientX(event) {
+  if ('touches' in event) {
+    return event.touches[0]?.clientX ?? null;
+  }
+
+  return event.clientX ?? null;
+}
+
+// The chat page owns message paging, overlays, and perspective swapping for a single thread.
 const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
   const [showInfo, setShowInfo] = useState(false);
   const [showFavourites, setShowFavourites] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [activeTab, setActiveTab] = useState('REELS');
   const [perspective, setPerspective] = useState(() => readStoredValue('chat-perspective', 'owner'));
@@ -143,12 +159,14 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
   const [revealProgress, setRevealProgress] = useState(0);
   const [viewerImage, setViewerImage] = useState('');
   const [favouriteMap, setFavouriteMap] = useState(() => readFavouriteMap());
+  const [focusState, setFocusState] = useState(null);
 
   const scrollRef = useRef(null);
   const anchorRestoreRef = useRef(null);
   const didScrollToBottomRef = useRef(false);
   const dragStartRef = useRef(null);
   const themeMenuRef = useRef(null);
+  const focusMessageIdRef = useRef(null);
 
   const themeClasses = CHAT_THEMES[theme] || CHAT_THEMES.sunset;
   const groupedMessages = useMemo(() => groupMessages(messages), [messages]);
@@ -182,6 +200,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
       setLoadError('');
       setMessages([]);
       setHasMoreMessages(true);
+      setFocusState(null);
       didScrollToBottomRef.current = false;
 
       try {
@@ -214,6 +233,16 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
   useEffect(() => {
     if (!scrollRef.current || didScrollToBottomRef.current || messages.length === 0) {
       return;
+    }
+
+    if (focusMessageIdRef.current) {
+      const focusNode = scrollRef.current.querySelector(`[data-message-id="${focusMessageIdRef.current}"]`);
+      if (focusNode) {
+        scrollRef.current.scrollTop = Math.max(0, focusNode.offsetTop - scrollRef.current.clientHeight / 2 + focusNode.clientHeight);
+        focusMessageIdRef.current = null;
+        didScrollToBottomRef.current = true;
+        return;
+      }
     }
 
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -264,14 +293,54 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
     setIsLoadingMore(true);
 
     try {
-      const nextPage = await getConversationMessagePage(
-        conversation.threadId,
-        oldestMessage.timestamp_ms,
-        PAGE_SIZE,
-      );
+      const nextPage = focusState
+        ? await getConversationMessagePage(conversation.threadId, oldestMessage.timestamp_ms, 50)
+        : await getConversationMessagePage(conversation.threadId, oldestMessage.timestamp_ms, PAGE_SIZE);
 
       setMessages((currentMessages) => [...nextPage, ...currentMessages]);
-      setHasMoreMessages(nextPage.length === PAGE_SIZE);
+      setHasMoreMessages(nextPage.length === (focusState ? 50 : PAGE_SIZE));
+      if (focusState) {
+        setFocusState((current) => ({
+          ...current,
+          hasOlder: nextPage.length === 50,
+        }));
+      }
+    } catch {
+      anchorRestoreRef.current = null;
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
+  async function loadNewerMessages() {
+    if (!conversation?.threadId || isInitialLoading || isLoadingMore || !focusState || messages.length === 0) {
+      return;
+    }
+
+    const newestMessage = messages[messages.length - 1];
+    if (!newestMessage || !scrollRef.current || !focusState.hasNewer) {
+      return;
+    }
+
+    const candidates = Array.from(scrollRef.current.querySelectorAll('[data-message-id]'));
+    const lastVisible = [...candidates].reverse().find((node) => node.offsetTop <= scrollRef.current.scrollTop + scrollRef.current.clientHeight);
+
+    if (lastVisible) {
+      anchorRestoreRef.current = {
+        messageId: lastVisible.getAttribute('data-message-id'),
+        offset: lastVisible.offsetTop - scrollRef.current.scrollTop,
+      };
+    }
+
+    setIsLoadingMore(true);
+
+    try {
+      const nextPage = await getMessagesNewerThan(conversation.threadId, newestMessage.timestamp_ms, 50);
+      setMessages((currentMessages) => [...currentMessages, ...nextPage]);
+      setFocusState((current) => ({
+        ...current,
+        hasNewer: nextPage.length === 50,
+      }));
     } catch {
       anchorRestoreRef.current = null;
     } finally {
@@ -280,8 +349,13 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
   }
 
   function handleScroll(event) {
-    if (event.currentTarget.scrollTop < 160) {
+    const element = event.currentTarget;
+    if (element.scrollTop < 160) {
       loadOlderMessages();
+    }
+
+    if (focusState && element.scrollTop + element.clientHeight >= element.scrollHeight - 160) {
+      loadNewerMessages();
     }
   }
 
@@ -305,7 +379,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
   }
 
   function handlePointerDown(event) {
-    dragStartRef.current = event.clientX;
+    dragStartRef.current = getSwipeClientX(event);
   }
 
   function handlePointerMove(event) {
@@ -313,7 +387,12 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
       return;
     }
 
-    const delta = Math.max(0, dragStartRef.current - event.clientX);
+    const currentX = getSwipeClientX(event);
+    if (currentX == null) {
+      return;
+    }
+
+    const delta = Math.max(0, dragStartRef.current - currentX);
     setRevealProgress(Math.min(delta / 56, 1));
   }
 
@@ -366,23 +445,43 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
     });
   }
 
+  async function handleSearchResultSelect(result) {
+    setShowSearch(false);
+    setLoadError('');
+    setIsInitialLoading(true);
+    focusMessageIdRef.current = result.message_id;
+
+    try {
+      const context = await getMessageContext(conversation.threadId, result.timestamp_ms, 50, 50);
+      setMessages(context.messages);
+      setHasMoreMessages(context.hasOlder);
+      setFocusState({
+        focusMessageId: result.message_id,
+        hasOlder: context.hasOlder,
+        hasNewer: context.hasNewer,
+      });
+      didScrollToBottomRef.current = false;
+    } catch {
+      setLoadError('Could not load that search result right now.');
+    } finally {
+      setIsInitialLoading(false);
+    }
+  }
+
   if (!conversation) {
     return <div className="flex h-full w-full bg-[#0b0e13]" />;
   }
 
   const isOwnerPerspective = perspective === 'owner';
-  const recipient = isOwnerPerspective
-    ? {
-        name: ownerName || 'You',
-        handle: OWNER_HANDLE_FALLBACK,
-        pfp: '/assets/default.jpg',
-      }
-    : {
-        name: conversation.displayName,
-        handle: conversation.username || '',
-        pfp: conversationImage || null,
-      };
+  const recipient = {
+    name: conversation.displayName,
+    handle: conversation.username || '',
+    pfp: conversationImage || null,
+  };
+  const perspectiveIconLabel = isOwnerPerspective ? 'Swap perspective' : 'Return to normal';
   const currentFavouriteIds = favouriteMap[conversation.threadId] || {};
+  const controlButtonClass =
+    'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-white/82 shadow-none outline-none transition hover:bg-white/5 focus:outline-none md:h-11 md:w-11';
 
   return (
     <div className={`flex h-full w-full flex-col ${themeClasses.shell}`}>
@@ -430,6 +529,10 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
         onPointerLeave={handlePointerEnd}
+        onTouchStart={handlePointerDown}
+        onTouchMove={handlePointerMove}
+        onTouchEnd={handlePointerEnd}
+        onTouchCancel={handlePointerEnd}
         className={`app-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-5 md:px-6 ${themeClasses.body}`}
       >
         {isLoadingMore && (
@@ -484,43 +587,49 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
         )}
       </div>
 
-      <div className="px-4 pb-4 pt-3 md:px-6 md:pb-5">
-        <div className={`flex items-center gap-2 rounded-[30px] px-3 py-3 text-white shadow-[0_18px_40px_rgba(0,0,0,0.22)] ${themeClasses.composer}`}>
-          <div className="flex min-w-0 flex-[1_1_auto] items-center gap-3 rounded-full border border-white/10 bg-black/10 px-4 py-3 text-white/55">
+      <div className="px-3 pb-3 pt-2 md:px-6 md:pb-5 md:pt-3">
+        <div className={`flex items-center gap-1.5 rounded-[30px] px-2 py-2 text-white shadow-[0_18px_40px_rgba(0,0,0,0.22)] md:gap-2 md:px-3 md:py-3 ${themeClasses.composer}`}>
+          <div className="flex min-w-0 flex-[1_1_auto] items-center gap-2 rounded-full border border-white/10 bg-black/5 px-3 py-2.5 text-white/60 md:gap-3 md:px-4 md:py-3">
             <Search className="h-5 w-5 shrink-0" />
-            <span className="truncate text-[16px]">Search in conversation</span>
+            <button
+              type="button"
+              onClick={() => setShowSearch(true)}
+              className="w-full border-0 bg-transparent p-0 text-left text-[15px] text-white/72 shadow-none outline-none hover:border-transparent focus:outline-none md:text-[16px]"
+            >
+              Search in conversation
+            </button>
           </div>
 
           <button
             type="button"
             onClick={() => setShowFavourites(true)}
-            className="rounded-full p-2 text-white/85"
+            className={controlButtonClass}
             aria-label="Favourites"
           >
-            <Heart className={`h-6 w-6 ${favouritesForConversation.length > 0 ? 'fill-[#ff5a7a] text-[#ff5a7a]' : ''}`} />
+            <Heart className={`h-5 w-5 md:h-6 md:w-6 ${favouritesForConversation.length > 0 ? 'fill-[#ff5a7a] text-[#ff5a7a]' : ''}`} />
           </button>
 
           <div className="relative" ref={themeMenuRef}>
             <button
               type="button"
               onClick={() => setShowThemeMenu((current) => !current)}
-              className="rounded-full p-2 text-white/85"
+              className={controlButtonClass}
               aria-label="Theme swap"
             >
-              <Palette className="h-6 w-6" />
+              <Palette className="h-5 w-5 md:h-6 md:w-6" />
             </button>
 
             {showThemeMenu && (
-              <div className="app-scrollbar absolute bottom-12 right-0 z-20 flex max-w-[min(92vw,560px)] items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-[#11151c]/95 p-2 shadow-[0_18px_40px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+              <div className="app-scrollbar absolute bottom-12 right-0 z-20 flex w-[min(84vw,280px)] flex-col gap-1.5 overflow-y-auto rounded-2xl border border-white/10 bg-[#11151c]/95 p-2 shadow-[0_18px_40px_rgba(0,0,0,0.38)] backdrop-blur-xl">
                 {Object.entries(CHAT_THEMES).map(([id, config]) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => handleThemeChange(id)}
-                    className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition ${theme === id ? 'bg-white/10 text-white' : 'text-white/75 hover:bg-white/6'}`}
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition ${theme === id ? 'bg-white/10 text-white' : 'text-white/75 hover:bg-white/6'}`}
                   >
                     <span className={`h-6 w-6 rounded-full ${config.header}`} />
-                    <span>{config.label}</span>
+                    <span className="truncate whitespace-nowrap">{config.label}</span>
                   </button>
                 ))}
               </div>
@@ -530,10 +639,15 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
           <button
             type="button"
             onClick={togglePerspectiveQuickly}
-            className="rounded-full p-2 text-white/85"
-            aria-label="Swap perspective"
+            className={controlButtonClass}
+            aria-label={perspectiveIconLabel}
+            title={perspectiveIconLabel}
           >
-            <UserRound className="h-6 w-6" />
+            {isOwnerPerspective ? (
+              <UserRound className="h-5 w-5 md:h-6 md:w-6" />
+            ) : (
+              <ArrowLeftRight className="h-5 w-5 md:h-6 md:w-6" />
+            )}
           </button>
         </div>
       </div>
@@ -542,6 +656,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
         isOpen={showInfo}
         onClose={() => setShowInfo(false)}
         recipient={recipient}
+        ownerName={ownerName || 'You'}
         perspective={perspective}
         setPerspective={handlePerspectiveChange}
         activeTab={activeTab}
@@ -561,10 +676,18 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
         onSelectMessage={jumpToMessage}
       />
       <MediaViewer
+        key={viewerImage || 'media-viewer'}
         isOpen={Boolean(viewerImage)}
         src={viewerImage}
         alt={conversation.displayName}
         onClose={() => setViewerImage('')}
+      />
+      <SearchOverlay
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
+        participants={[ownerName, ...((conversation.participants || []).filter((name) => name !== ownerName))].filter(Boolean)}
+        threadId={conversation.threadId}
+        onSelectResult={handleSearchResultSelect}
       />
     </div>
   );

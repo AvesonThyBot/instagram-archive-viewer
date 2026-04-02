@@ -66,10 +66,12 @@ function MediaTile({ item }) {
   );
 }
 
+// This panel mixes conversation settings with paged media views so large threads stay fast.
 const SettingsOverlay = ({
   isOpen,
   onClose,
   recipient,
+  ownerName,
   perspective,
   setPerspective,
   activeTab,
@@ -171,15 +173,19 @@ const SettingsOverlay = ({
   }
 
   const activeTabConfig = useMemo(() => TAB_CONFIG[activeTab], [activeTab]);
+  const perspectiveOptions = [
+    { id: 'owner', label: ownerName || 'You' },
+    { id: 'other', label: recipient.name },
+  ];
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm">
       <div className="flex h-full w-full items-end justify-center md:items-center md:p-6">
-        <div className="flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-black shadow-2xl md:h-auto md:max-h-[92vh] md:w-[min(92vw,1080px)] md:rounded-3xl">
+        <div className="flex h-[100dvh] w-full flex-col overflow-hidden border border-white/10 bg-black shadow-2xl sm:h-[94dvh] sm:rounded-t-3xl md:h-auto md:max-h-[92vh] md:w-[min(92vw,1080px)] md:rounded-3xl">
           <div className="flex items-center border-b border-zinc-900 bg-black p-4">
-            <button onClick={onClose} className="mr-4 rounded-full border border-white/10 bg-white/5 p-2">
+            <button onClick={onClose} className="mr-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 p-0">
               <ChevronLeft className="h-5 w-5" />
             </button>
             <span className="text-lg font-bold">Details</span>
@@ -218,22 +224,21 @@ const SettingsOverlay = ({
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-[13px] font-bold">View Perspective</span>
                 <span className="text-[10px] font-black uppercase text-zinc-500">
-                  {perspective === 'owner' ? 'Your side' : 'Their side'}
+                  {perspectiveOptions.find((option) => option.id === perspective)?.label || recipient.name}
                 </span>
               </div>
               <div className="flex rounded-xl border border-zinc-800 bg-[#121212] p-1">
-                <button
-                  onClick={() => setPerspective('owner')}
-                  className={`flex-1 rounded-lg py-2.5 text-[11px] font-black transition-all ${perspective === 'owner' ? 'bg-zinc-800 text-white shadow-md' : 'text-zinc-500 opacity-50'}`}
-                >
-                  YOUR SIDE
-                </button>
-                <button
-                  onClick={() => setPerspective('other')}
-                  className={`flex-1 rounded-lg py-2.5 text-[11px] font-black transition-all ${perspective === 'other' ? 'bg-zinc-800 text-white shadow-md' : 'text-zinc-500 opacity-50'}`}
-                >
-                  THEIR SIDE
-                </button>
+                {perspectiveOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => setPerspective(option.id)}
+                    className={`flex-1 rounded-lg px-3 py-2.5 text-[11px] font-black uppercase transition-all ${
+                      perspective === option.id ? 'bg-zinc-800 text-white shadow-md' : 'text-zinc-500 opacity-50'
+                    }`}
+                  >
+                    <span className="block truncate">{option.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -244,7 +249,7 @@ const SettingsOverlay = ({
                   {themes.find((option) => option.id === theme)?.label || 'Custom'}
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              <div className="flex flex-col gap-3 md:grid md:grid-cols-3">
                 {[
                   { id: 'sunset', swatch: 'from-[#2a0000] via-[#511010] to-[#ff5a2f]' },
                   { id: 'classic', swatch: 'from-[#111111] via-[#1d1d1f] to-[#303030]' },
@@ -256,12 +261,12 @@ const SettingsOverlay = ({
                     key={option.id}
                     type="button"
                     onClick={() => setTheme(option.id)}
-                    className={`rounded-2xl border p-3 text-left transition ${
+                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition md:block ${
                       theme === option.id ? 'border-white/40 bg-white/8' : 'border-white/10 bg-white/[0.03]'
                     }`}
                   >
-                    <div className={`h-16 rounded-xl bg-gradient-to-br ${option.swatch}`} />
-                    <div className="mt-2 text-xs font-semibold text-white">
+                    <div className={`h-12 w-12 shrink-0 rounded-xl bg-gradient-to-br md:h-16 md:w-full ${option.swatch}`} />
+                    <div className="min-w-0 text-xs font-semibold text-white md:mt-2">
                       {themes.find((themeOption) => themeOption.id === option.id)?.label || option.id}
                     </div>
                   </button>
@@ -270,7 +275,7 @@ const SettingsOverlay = ({
             </div>
 
             <div className="border-t border-zinc-900 px-4 pt-2">
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 {Object.entries(TAB_CONFIG).map(([tab, config]) => {
                   const Icon = config.icon;
 

@@ -9,6 +9,7 @@ function formatFavouriteTime(timestampMs) {
   });
 }
 
+// Favourites stay lightweight and local so users can jump back into important moments quickly.
 const FavouritesOverlay = ({ isOpen, onClose, favourites, onSelectMessage }) => {
   if (!isOpen) {
     return null;
@@ -17,15 +18,15 @@ const FavouritesOverlay = ({ isOpen, onClose, favourites, onSelectMessage }) => 
   return (
     <div className="fixed inset-0 z-[65] bg-black/80 backdrop-blur-sm">
       <div className="flex h-full w-full items-end justify-center md:items-center md:p-6">
-        <div className="flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-[#0b0e13] shadow-2xl md:h-auto md:max-h-[86vh] md:w-[min(92vw,760px)] md:rounded-3xl">
+        <div className="flex h-[100dvh] w-full flex-col overflow-hidden border border-white/10 bg-[#0b0e13] shadow-2xl sm:h-[94dvh] sm:rounded-t-3xl md:h-auto md:max-h-[86vh] md:w-[min(92vw,760px)] md:rounded-3xl">
           <div className="flex items-center border-b border-white/10 px-4 py-4">
-            <button onClick={onClose} className="mr-4 rounded-full border border-white/10 bg-white/5 p-2 text-white">
+            <button onClick={onClose} className="mr-4 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 p-0 text-white">
               <ChevronLeft className="h-5 w-5" />
             </button>
             <span className="text-lg font-bold text-white">Favourites</span>
           </div>
 
-          <div className="app-scrollbar flex-1 overflow-y-auto px-4 py-4">
+          <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-4">
             {favourites.length > 0 ? (
               <div className="space-y-3">
                 {favourites.map((message) => (

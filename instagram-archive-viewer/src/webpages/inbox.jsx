@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Download, PanelLeft, Search, Settings, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ChatPage from './chat';
+import InboxExportOverlay from '../components/InboxExportOverlay';
+import InboxSettingsOverlay from '../components/InboxSettingsOverlay';
+import InboxWrappedOverlay from '../components/InboxWrappedOverlay';
 import { resolveArchiveUri } from '../lib/messageAssets';
 
 const INDEX_URL = '/data/your_instagram_activity/messages/inbox_index.json';
@@ -52,12 +55,14 @@ function getConversationName(conversation, ownerName) {
   return conversation.title || otherParticipants[0] || conversation.participants?.[0] || conversation.threadId;
 }
 
+// The inbox page owns the master conversation list and swaps between sidebar-only and chat modes.
 const InboxPage = () => {
   const navigate = useNavigate();
   const { threadId } = useParams();
   const [indexData, setIndexData] = useState(null);
   const [searchValue, setSearchValue] = useState('');
   const [isCompactMobileInbox, setIsCompactMobileInbox] = useState(false);
+  const [activeActionPanel, setActiveActionPanel] = useState('');
 
   // The inbox list still comes from the lightweight JSON index so the shell loads immediately.
   useEffect(() => {
@@ -87,6 +92,10 @@ const InboxPage = () => {
     };
   }, []);
 
+  function handleIndexUpdate(nextIndexData) {
+    setIndexData(nextIndexData);
+  }
+
   const ownerName = indexData?.ownerName || '';
   const conversations = useMemo(() => {
     return (indexData?.conversations || []).map((conversation) => ({
@@ -112,6 +121,8 @@ const InboxPage = () => {
 
   const selectedConversation = conversations.find((conversation) => conversation.threadId === threadId);
   const showMobileChat = Boolean(selectedConversation);
+  // On phones the inbox can collapse its header tools while still keeping the message list visible.
+  const showActionButtons = !isCompactMobileInbox || !showMobileChat;
 
   return (
     <div className="flex h-full w-full bg-[#0a0d12] text-white">
@@ -126,21 +137,33 @@ const InboxPage = () => {
             <p className="hidden text-[11px] uppercase tracking-[0.28em] text-zinc-500 md:block">Messages</p>
             <h1 className="mt-1 text-[24px] font-semibold tracking-tight">{ownerName || 'Inbox'}</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => setIsCompactMobileInbox((current) => !current)}
-            className="rounded-full border border-white/10 bg-white/5 p-2 text-zinc-300 md:hidden"
-            aria-label="Toggle inbox controls"
-          >
-            <PanelLeft className="h-4 w-4" />
-          </button>
+          {showMobileChat ? (
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 p-0 text-zinc-300 md:hidden"
+              aria-label="Hide inbox"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsCompactMobileInbox((current) => !current)}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 p-0 text-zinc-300 md:hidden"
+              aria-label="Toggle inbox controls"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
-        <div className={`${isCompactMobileInbox ? 'hidden md:grid' : 'grid'} grid-cols-3 gap-2 px-4 pb-4`}>
+        <div className={`${showActionButtons ? 'grid' : 'hidden md:grid'} grid-cols-3 gap-2 px-4 pb-4`}>
           {actionButtons.map(({ label, icon }) => (
             <button
               key={label}
               type="button"
+              onClick={() => setActiveActionPanel(label)}
               className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-zinc-200 transition hover:bg-white/[0.08]"
             >
               {React.createElement(icon, { className: 'h-4 w-4' })}
@@ -149,7 +172,7 @@ const InboxPage = () => {
           ))}
         </div>
 
-        <div className={`${isCompactMobileInbox ? 'hidden md:block' : 'block'} px-4 pb-4`}>
+        <div className={`${showActionButtons ? 'block' : 'hidden md:block'} px-4 pb-4`}>
           <label className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-3 text-zinc-400">
             <Search className="h-4 w-4" />
             <input
@@ -161,7 +184,7 @@ const InboxPage = () => {
           </label>
         </div>
 
-        <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+        <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto px-3 pb-4">
           {filteredConversations.map((conversation) => {
             const isSelected = conversation.threadId === threadId;
 
@@ -170,24 +193,24 @@ const InboxPage = () => {
                 key={conversation.threadId}
                 type="button"
                 onClick={() => navigate(`/chat/${conversation.threadId}`)}
-                className={`mb-1 flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition ${
+                className={`mb-3 flex w-full items-start gap-3 rounded-[24px] px-4 py-4.5 text-left transition ${
                   isSelected ? 'bg-white/[0.08]' : 'hover:bg-white/[0.04]'
                 }`}
               >
                 <img
                   src={conversation.resolvedImageUri}
                   alt={conversation.displayName}
-                  className="h-12 w-12 shrink-0 rounded-full object-cover"
+                  className="h-[52px] w-[52px] shrink-0 rounded-full object-cover"
                 />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="truncate text-[15px] font-medium text-white">{conversation.displayName}</p>
-                    <span className="shrink-0 text-[11px] text-zinc-500">
+                    <p className="truncate text-[15px] font-semibold leading-6 text-white">{conversation.displayName}</p>
+                    <span className="shrink-0 pt-0.5 text-[12px] text-zinc-500">
                       {formatInboxTimestamp(conversation.lastMessageAt)}
                     </span>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-[13px] leading-5 text-zinc-400">
+                  <p className="mt-1.5 line-clamp-2 text-[14px] leading-5 text-zinc-400">
                     {formatMessagePreview(conversation, ownerName)}
                   </p>
                 </div>
@@ -209,6 +232,15 @@ const InboxPage = () => {
           <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(88,81,219,0.14),_transparent_30%),linear-gradient(180deg,#0b0e13_0%,#090b10_100%)]" />
         )}
       </main>
+
+      <InboxSettingsOverlay
+        isOpen={activeActionPanel === 'Settings'}
+        onClose={() => setActiveActionPanel('')}
+        indexData={indexData}
+        onIndexUpdate={handleIndexUpdate}
+      />
+      <InboxWrappedOverlay isOpen={activeActionPanel === 'Wrapped'} onClose={() => setActiveActionPanel('')} />
+      <InboxExportOverlay isOpen={activeActionPanel === 'Export'} onClose={() => setActiveActionPanel('')} />
     </div>
   );
 };

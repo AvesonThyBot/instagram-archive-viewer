@@ -5,6 +5,7 @@ import { formatMessagePreview, normalizeMessage, resolveConversationImageUri } f
 
 const targetDir = process.argv[2];
 
+// The inbox index is intentionally lightweight so the sidebar can load without opening SQLite first.
 function safeReadJson(filePath) {
 	try {
 		return JSON.parse(fs.readFileSync(filePath, "utf8"));

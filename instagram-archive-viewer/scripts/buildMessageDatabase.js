@@ -10,6 +10,7 @@ import {
 
 const targetDir = process.argv[2];
 
+// The SQLite build step turns many raw Instagram JSON files into one browser-friendly search database.
 function safeReadJson(filePath) {
   try {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'));

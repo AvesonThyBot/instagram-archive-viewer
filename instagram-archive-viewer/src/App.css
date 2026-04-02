@@ -48,3 +48,4 @@
 .sender-message {
 	color: #dc3221;
 }
+/* Reserved for app-level CSS overrides if the routed inbox shell needs them later. */
