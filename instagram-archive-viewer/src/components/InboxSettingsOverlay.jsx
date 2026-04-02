@@ -33,7 +33,6 @@ const InboxSettingsOverlay = ({ isOpen, onClose, indexData, onIndexUpdate }) => 
 
     try {
       const { nextIndexData, fileName } = await uploadProfilePicture({
-        indexData,
         threadId: conversation.threadId,
         displayName: conversation.displayName,
         file,

@@ -40,7 +40,7 @@ function readFileAsDataUrl(file) {
   });
 }
 
-export async function uploadProfilePicture({ indexData, threadId, displayName, file }) {
+export async function uploadProfilePicture({ threadId, displayName, file }) {
   const validationError = validateProfilePictureFile(file);
   if (validationError) {
     throw new Error(validationError);
@@ -53,9 +53,8 @@ export async function uploadProfilePicture({ indexData, threadId, displayName, f
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      indexData,
       threadId,
-      displayName,
+      displayName: displayName || '',
       fileName: file.name,
       mimeType: file.type,
       dataUrl,

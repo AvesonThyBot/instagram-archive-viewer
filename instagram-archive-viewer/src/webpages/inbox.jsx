@@ -240,9 +240,14 @@ const InboxPage = () => {
         onIndexUpdate={handleIndexUpdate}
       />
       <InboxWrappedOverlay isOpen={activeActionPanel === 'Wrapped'} onClose={() => setActiveActionPanel('')} />
-      <InboxExportOverlay isOpen={activeActionPanel === 'Export'} onClose={() => setActiveActionPanel('')} />
+      <InboxExportOverlay
+        isOpen={activeActionPanel === 'Export'}
+        onClose={() => setActiveActionPanel('')}
+        indexData={indexData}
+      />
     </div>
   );
 };
 
 export default InboxPage;
+ 
