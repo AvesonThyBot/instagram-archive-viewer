@@ -1,54 +1,16 @@
+/* global process */
 import fs from "fs";
 import path from "path";
+import { formatMessagePreview, normalizeMessage, resolveConversationImageUri } from "./archiveMessageUtils.js";
 
 const targetDir = process.argv[2];
 
 function safeReadJson(filePath) {
 	try {
 		return JSON.parse(fs.readFileSync(filePath, "utf8"));
-	} catch (error) {
+	} catch {
 		return null;
 	}
-}
-
-function formatPreview(message) {
-	if (!message) {
-		return "No messages yet";
-	}
-
-	if (typeof message.content === "string" && message.content.trim()) {
-		return message.content.trim();
-	}
-
-	if (Array.isArray(message.photos) && message.photos.length > 0) {
-		return "Sent a photo";
-	}
-
-	if (Array.isArray(message.videos) && message.videos.length > 0) {
-		return "Sent a video";
-	}
-
-	if (Array.isArray(message.audio_files) && message.audio_files.length > 0) {
-		return "Sent an audio message";
-	}
-
-	if (Array.isArray(message.audio) && message.audio.length > 0) {
-		return "Sent an audio message";
-	}
-
-	if (Array.isArray(message.files) && message.files.length > 0) {
-		return "Sent a file";
-	}
-
-	if (message.share?.link) {
-		return message.share.share_text?.trim() || "Shared a link";
-	}
-
-	if (message.reactions?.length) {
-		return "Reacted to a message";
-	}
-
-	return "Sent a message";
 }
 
 function pickOwnerName(conversations) {
@@ -84,10 +46,14 @@ function buildConversationSummary(threadDir) {
 			? threadData.title.trim()
 			: "";
 
+	const normalizedMessages = threadData.messages
+		.map((message) => normalizeMessage(message))
+		.filter(Boolean);
+
 	const latestMessage =
-		threadData.messages
-			.filter((message) => typeof message?.timestamp_ms === "number")
-			.sort((a, b) => b.timestamp_ms - a.timestamp_ms)[0] || null;
+		normalizedMessages
+			.filter((message) => typeof message?.timestampMs === "number")
+			.sort((a, b) => b.timestampMs - a.timestampMs)[0] || null;
 
 	return {
 		threadId: path.basename(threadDir),
@@ -95,12 +61,12 @@ function buildConversationSummary(threadDir) {
 		participants,
 		title: conversationTitle,
 		isGroup,
-		imageUri: threadData.image?.uri || "",
-		lastMessageAt: latestMessage?.timestamp_ms || 0,
-		lastMessageSender: latestMessage?.sender_name || "",
-		lastMessagePreview: formatPreview(latestMessage),
-		messageCount: threadData.messages.length,
-		hasMessages: threadData.messages.length > 0,
+		imageUri: resolveConversationImageUri(threadData),
+		lastMessageAt: latestMessage?.timestampMs || 0,
+		lastMessageSender: latestMessage?.senderName || "",
+		lastMessagePreview: formatMessagePreview(latestMessage?.raw),
+		messageCount: normalizedMessages.length,
+		hasMessages: normalizedMessages.length > 0,
 	};
 }
 

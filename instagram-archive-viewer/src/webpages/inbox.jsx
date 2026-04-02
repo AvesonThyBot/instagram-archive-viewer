@@ -1,13 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  Download,
-  PanelLeft,
-  Search,
-  Settings,
-  Sparkles,
-} from 'lucide-react';
+import { Download, PanelLeft, Search, Settings, Sparkles } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ChatPage from './chat';
+import { resolveArchiveUri } from '../lib/messageAssets';
 
 const INDEX_URL = '/data/your_instagram_activity/messages/inbox_index.json';
 
@@ -57,22 +52,14 @@ function getConversationName(conversation, ownerName) {
   return conversation.title || otherParticipants[0] || conversation.participants?.[0] || conversation.threadId;
 }
 
-function getConversationImage(conversation) {
-  if (conversation.imageUri) {
-    return `/data/${conversation.imageUri}`;
-  }
-
-  return '';
-}
-
 const InboxPage = () => {
   const navigate = useNavigate();
   const { threadId } = useParams();
   const [indexData, setIndexData] = useState(null);
-  const [selectedMessages, setSelectedMessages] = useState([]);
   const [searchValue, setSearchValue] = useState('');
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isCompactMobileInbox, setIsCompactMobileInbox] = useState(false);
 
+  // The inbox list still comes from the lightweight JSON index so the shell loads immediately.
   useEffect(() => {
     let isActive = true;
 
@@ -106,62 +93,9 @@ const InboxPage = () => {
       ...conversation,
       username: !conversation.isGroup ? conversation.threadId.replace(/_\d+$/, '') : '',
       displayName: getConversationName(conversation, ownerName),
+      resolvedImageUri: resolveArchiveUri(conversation.imageUri),
     }));
   }, [indexData, ownerName]);
-
-  useEffect(() => {
-    if (!indexData || !threadId) {
-      setSelectedMessages([]);
-      setIsLoadingMessages(false);
-      return;
-    }
-
-    const selectedConversation = conversations.find((conversation) => conversation.threadId === threadId);
-    if (!selectedConversation) {
-      setSelectedMessages([]);
-      setIsLoadingMessages(false);
-      return;
-    }
-
-    let isActive = true;
-    setIsLoadingMessages(true);
-
-    fetch(`/data/${selectedConversation.threadPath}/messages.json`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Could not load conversation');
-        }
-
-        return response.json();
-      })
-      .then((data) => {
-        if (!isActive) {
-          return;
-        }
-
-        const orderedMessages = Array.isArray(data.messages)
-          ? [...data.messages]
-              .filter((message) => typeof message?.timestamp_ms === 'number')
-              .sort((a, b) => a.timestamp_ms - b.timestamp_ms)
-          : [];
-
-        setSelectedMessages(orderedMessages);
-      })
-      .catch(() => {
-        if (isActive) {
-          setSelectedMessages([]);
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoadingMessages(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [conversations, indexData, threadId]);
 
   const filteredConversations = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -181,6 +115,7 @@ const InboxPage = () => {
 
   return (
     <div className="flex h-full w-full bg-[#0a0d12] text-white">
+      {/* Inbox column / hidden on phones once a thread is opened */}
       <aside
         className={`${
           showMobileChat ? 'hidden md:flex' : 'flex'
@@ -188,28 +123,33 @@ const InboxPage = () => {
       >
         <div className="flex items-center justify-between px-5 pb-3 pt-5">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.28em] text-zinc-500 md:block hidden">Messages</p>
+            <p className="hidden text-[11px] uppercase tracking-[0.28em] text-zinc-500 md:block">Messages</p>
             <h1 className="mt-1 text-[24px] font-semibold tracking-tight">{ownerName || 'Inbox'}</h1>
           </div>
-          <div className="rounded-full border border-white/10 bg-white/5 p-2 text-zinc-300 md:hidden">
+          <button
+            type="button"
+            onClick={() => setIsCompactMobileInbox((current) => !current)}
+            className="rounded-full border border-white/10 bg-white/5 p-2 text-zinc-300 md:hidden"
+            aria-label="Toggle inbox controls"
+          >
             <PanelLeft className="h-4 w-4" />
-          </div>
+          </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 px-4 pb-4">
-          {actionButtons.map(({ label, icon: Icon }) => (
+        <div className={`${isCompactMobileInbox ? 'hidden md:grid' : 'grid'} grid-cols-3 gap-2 px-4 pb-4`}>
+          {actionButtons.map(({ label, icon }) => (
             <button
               key={label}
               type="button"
               className="flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm text-zinc-200 transition hover:bg-white/[0.08]"
             >
-              <Icon className="h-4 w-4" />
+              {React.createElement(icon, { className: 'h-4 w-4' })}
               <span>{label}</span>
             </button>
           ))}
         </div>
 
-        <div className="px-4 pb-4">
+        <div className={`${isCompactMobileInbox ? 'hidden md:block' : 'block'} px-4 pb-4`}>
           <label className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-3 text-zinc-400">
             <Search className="h-4 w-4" />
             <input
@@ -221,7 +161,7 @@ const InboxPage = () => {
           </label>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+        <div className="app-scrollbar min-h-0 flex-1 overflow-y-auto px-2 pb-3">
           {filteredConversations.map((conversation) => {
             const isSelected = conversation.threadId === threadId;
 
@@ -229,24 +169,16 @@ const InboxPage = () => {
               <button
                 key={conversation.threadId}
                 type="button"
-                onClick={() => {
-                  navigate(`/chat/${conversation.threadId}`);
-                }}
+                onClick={() => navigate(`/chat/${conversation.threadId}`)}
                 className={`mb-1 flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-left transition ${
                   isSelected ? 'bg-white/[0.08]' : 'hover:bg-white/[0.04]'
                 }`}
               >
-                {getConversationImage(conversation) ? (
-                  <img
-                    src={getConversationImage(conversation)}
-                    alt={conversation.displayName}
-                    className="h-12 w-12 shrink-0 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#5851db] via-[#c13584] to-[#f77737] text-sm font-semibold">
-                    {conversation.displayName.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
+                <img
+                  src={conversation.resolvedImageUri}
+                  alt={conversation.displayName}
+                  className="h-12 w-12 shrink-0 rounded-full object-cover"
+                />
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
@@ -264,26 +196,15 @@ const InboxPage = () => {
           })}
 
           {filteredConversations.length === 0 && (
-            <div className="px-4 py-10 text-sm text-zinc-500">
-              No conversations matched that search.
-            </div>
+            <div className="px-4 py-10 text-sm text-zinc-500">No conversations matched that search.</div>
           )}
         </div>
       </aside>
 
+      {/* Main chat panel / only shown once a thread is picked on mobile */}
       <main className={`${selectedConversation ? 'flex' : 'hidden md:flex'} min-w-0 flex-1 flex-col bg-[#0b0e13]`}>
-        {isLoadingMessages ? (
-          <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-            Loading conversation...
-          </div>
-        ) : selectedConversation ? (
-          <ChatPage
-            key={selectedConversation.threadId}
-            conversation={selectedConversation}
-            ownerName={ownerName}
-            messages={selectedMessages}
-            onBackToInbox={() => navigate('/')}
-          />
+        {selectedConversation ? (
+          <ChatPage key={selectedConversation.threadId} conversation={selectedConversation} ownerName={ownerName} onBackToInbox={() => navigate('/')} />
         ) : (
           <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(88,81,219,0.14),_transparent_30%),linear-gradient(180deg,#0b0e13_0%,#090b10_100%)]" />
         )}

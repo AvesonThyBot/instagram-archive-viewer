@@ -46,6 +46,17 @@ body {
 	background-color: #0b0e13;
 }
 
+.app-scrollbar {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+}
+
+.app-scrollbar::-webkit-scrollbar {
+	display: none;
+	width: 0;
+	height: 0;
+}
+
 h1 {
 	font-size: 3.2em;
 	line-height: 1.1;

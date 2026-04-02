@@ -129,6 +129,14 @@ else
     exit 1
 fi
 
+# // ----- Package Installation -----
+cd "$REPO_PATH" || exit
+if [ -f "package.json" ]; then
+    echo -e "\n${CYAN}Installing project packages needed for the viewer and SQLite build...${NC}"
+    npm install --silent > /dev/null 2>&1
+    echo -e "${GREEN}   Packages are ready.${NC}"
+fi
+
 # // ----- Inbox Index Phase -----
 echo -e "\n${CYAN}Building your inbox list for the desktop-style DM view...${NC}"
 if [ -f "$REPO_PATH/scripts/buildInboxIndex.js" ]; then
@@ -140,10 +148,15 @@ else
     exit 1
 fi
 
-# // ----- Silent Package Installation (Final Step) -----
-cd "$REPO_PATH" || exit
-if [ -f "package.json" ]; then
-    npm install --silent > /dev/null 2>&1
+# // ----- SQLite Message Database Phase -----
+echo -e "\n${CYAN}Preparing the SQLite message database for faster loading and search...${NC}"
+if [ -f "$REPO_PATH/scripts/buildMessageDatabase.js" ]; then
+    echo -e "   ${YELLOW}Classifying messages, attachments, reels, and links conversation by conversation...${NC}"
+    node "$REPO_PATH/scripts/buildMessageDatabase.js" "$TARGET_DATA_DIR/your_instagram_activity"
+    echo -e "${GREEN}   SQLite message database prepared successfully.${NC}"
+else
+    echo -e "${RED}Error: scripts/buildMessageDatabase.js not found.${NC}"
+    exit 1
 fi
 
 # // ----- Final Stats -----

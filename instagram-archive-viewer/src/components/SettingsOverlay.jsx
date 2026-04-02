@@ -1,22 +1,177 @@
-/**
- * Renders the user profile details and configuration options in a full-screen overlay.
- * Replaces specific user identities with generic "Receiver" and "Sender" labels for public distribution.
- */
-import React from 'react';
-import { ChevronLeft, User, Search, Bell, MoreHorizontal } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ChevronLeft,
+  Clapperboard,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  LoaderCircle,
+  MoreHorizontal,
+  Search,
+  Bell,
+  User,
+} from 'lucide-react';
+import { getConversationMediaPage } from '../lib/sqliteClient';
+import { resolveArchiveUri } from '../lib/messageAssets';
 
-const SettingsOverlay = ({ 
-  isOpen, 
-  onClose, 
-  recipient, 
-  perspective, 
-  setPerspective, 
-  activeTab, 
+const TAB_CONFIG = {
+  MEDIA: { label: 'Photos & videos', icon: ImageIcon },
+  REELS: { label: 'Reels', icon: Clapperboard },
+  LINKS: { label: 'Links', icon: LinkIcon },
+};
+
+const MEDIA_PAGE_SIZE = 30;
+
+function MediaTile({ item }) {
+  const assetUri = resolveArchiveUri(
+    item.metadata?.attachments?.[0]?.uri || item.asset_uri || item.share_link,
+  );
+  const [loaded, setLoaded] = useState(false);
+
+  if (item.type === 'photo' && assetUri) {
+    return (
+      <a
+        href={assetUri}
+        target="_blank"
+        rel="noreferrer"
+        className="relative flex aspect-square overflow-hidden rounded-2xl bg-zinc-900"
+      >
+        {!loaded && <div className="absolute inset-0 animate-pulse bg-zinc-800" />}
+        <img
+          src={assetUri}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          width="220"
+          height="220"
+          sizes="(max-width: 768px) 44vw, 18vw"
+          onLoad={() => setLoaded(true)}
+          className={`h-full w-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        />
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={assetUri || '#'}
+      target={assetUri ? '_blank' : undefined}
+      rel={assetUri ? 'noreferrer' : undefined}
+      className="flex aspect-square flex-col items-center justify-center rounded-2xl bg-zinc-900 px-3 text-center"
+    >
+      <span className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">
+        {item.type}
+      </span>
+      <span className="mt-2 line-clamp-4 text-[11px] text-zinc-300">{item.preview_text}</span>
+    </a>
+  );
+}
+
+const SettingsOverlay = ({
+  isOpen,
+  onClose,
+  recipient,
+  perspective,
+  setPerspective,
+  activeTab,
   setActiveTab,
   theme,
   setTheme,
   themes = [],
+  threadId,
 }) => {
+  const [tabItems, setTabItems] = useState({
+    MEDIA: [],
+    REELS: [],
+    LINKS: [],
+  });
+  const [tabLoading, setTabLoading] = useState({
+    MEDIA: false,
+    REELS: false,
+    LINKS: false,
+  });
+  const [tabHasMore, setTabHasMore] = useState({
+    MEDIA: true,
+    REELS: true,
+    LINKS: true,
+  });
+
+  const gridRef = useRef(null);
+
+  const activeItems = tabItems[activeTab] || [];
+
+  useEffect(() => {
+    if (!isOpen || !threadId) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadInitialTabPages() {
+      const tabs = ['MEDIA', 'REELS', 'LINKS'];
+
+      for (const tab of tabs) {
+        setTabLoading((current) => ({ ...current, [tab]: true }));
+        try {
+          const rows = await getConversationMediaPage(threadId, tab, null, MEDIA_PAGE_SIZE);
+          if (!isActive) {
+            return;
+          }
+
+          setTabItems((current) => ({ ...current, [tab]: rows }));
+          setTabHasMore((current) => ({ ...current, [tab]: rows.length === MEDIA_PAGE_SIZE }));
+        } catch {
+          if (isActive) {
+            setTabItems((current) => ({ ...current, [tab]: [] }));
+            setTabHasMore((current) => ({ ...current, [tab]: false }));
+          }
+        } finally {
+          if (isActive) {
+            setTabLoading((current) => ({ ...current, [tab]: false }));
+          }
+        }
+      }
+    }
+
+    loadInitialTabPages();
+
+    return () => {
+      isActive = false;
+    };
+  }, [isOpen, threadId]);
+
+  async function loadMoreForActiveTab() {
+    if (!threadId || tabLoading[activeTab] || !tabHasMore[activeTab] || activeItems.length === 0) {
+      return;
+    }
+
+    const lastItem = activeItems[activeItems.length - 1];
+    setTabLoading((current) => ({ ...current, [activeTab]: true }));
+
+    try {
+      const nextRows = await getConversationMediaPage(
+        threadId,
+        activeTab,
+        lastItem.timestamp_ms,
+        MEDIA_PAGE_SIZE,
+      );
+
+      setTabItems((current) => ({
+        ...current,
+        [activeTab]: [...current[activeTab], ...nextRows],
+      }));
+      setTabHasMore((current) => ({
+        ...current,
+        [activeTab]: nextRows.length === MEDIA_PAGE_SIZE,
+      }));
+    } catch {
+      setTabHasMore((current) => ({ ...current, [activeTab]: false }));
+    } finally {
+      setTabLoading((current) => ({ ...current, [activeTab]: false }));
+    }
+  }
+
+  const activeTabConfig = useMemo(() => TAB_CONFIG[activeTab], [activeTab]);
+
   if (!isOpen) return null;
 
   return (
@@ -30,7 +185,7 @@ const SettingsOverlay = ({
             <span className="text-lg font-bold">Details</span>
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="app-scrollbar flex-1 overflow-y-auto">
             <div className="flex flex-col items-center px-6 pb-6 pt-8">
               <div className="mb-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-zinc-700 bg-zinc-800">
                 {recipient.pfp ? (
@@ -41,17 +196,17 @@ const SettingsOverlay = ({
               </div>
               <h2 className="text-xl font-bold tracking-tight">{recipient.name}</h2>
               <p className="mt-1 text-sm text-zinc-500">{recipient.handle ? `@${recipient.handle}` : 'Instagram conversation'}</p>
-              
+
               <div className="mt-8 grid w-full max-w-[320px] grid-cols-4 gap-4">
                 {[
-                  { icon: <User />, label: 'Profile' }, 
-                  { icon: <Search />, label: 'Search' }, 
-                  { icon: <Bell />, label: 'Mute' }, 
-                  { icon: <MoreHorizontal />, label: 'Options' }
+                  { icon: <User />, label: 'Profile' },
+                  { icon: <Search />, label: 'Search' },
+                  { icon: <Bell />, label: 'Mute' },
+                  { icon: <MoreHorizontal />, label: 'Options' },
                 ].map((btn) => (
                   <div key={btn.label} className="flex flex-col items-center gap-2">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-800 bg-zinc-950 transition-colors active:bg-zinc-900">
-                      {React.cloneElement(btn.icon, { className: "w-5 h-5" })}
+                      {React.cloneElement(btn.icon, { className: 'w-5 h-5' })}
                     </div>
                     <span className="text-[11px] font-medium text-zinc-300">{btn.label}</span>
                   </div>
@@ -61,33 +216,33 @@ const SettingsOverlay = ({
 
             <div className="border-t border-zinc-900 px-5 py-6">
               <div className="mb-4 flex items-center justify-between">
-                 <span className="text-[13px] font-bold">View Perspective</span>
-                 <span className="text-[10px] font-black uppercase text-zinc-500">
-                   {perspective === 'owner' ? 'Your side' : 'Their side'}
-                 </span>
+                <span className="text-[13px] font-bold">View Perspective</span>
+                <span className="text-[10px] font-black uppercase text-zinc-500">
+                  {perspective === 'owner' ? 'Your side' : 'Their side'}
+                </span>
               </div>
               <div className="flex rounded-xl border border-zinc-800 bg-[#121212] p-1">
-                  <button 
-                    onClick={() => setPerspective('owner')} 
-                    className={`flex-1 rounded-lg py-2.5 text-[11px] font-black transition-all ${perspective === 'owner' ? 'bg-zinc-800 text-white shadow-md' : 'text-zinc-500 opacity-50'}`}
-                  >
-                    YOUR SIDE
-                  </button>
-                  <button 
-                    onClick={() => setPerspective('other')} 
-                    className={`flex-1 rounded-lg py-2.5 text-[11px] font-black transition-all ${perspective === 'other' ? 'bg-zinc-800 text-white shadow-md' : 'text-zinc-500 opacity-50'}`}
-                  >
-                    THEIR SIDE
-                  </button>
-                </div>
+                <button
+                  onClick={() => setPerspective('owner')}
+                  className={`flex-1 rounded-lg py-2.5 text-[11px] font-black transition-all ${perspective === 'owner' ? 'bg-zinc-800 text-white shadow-md' : 'text-zinc-500 opacity-50'}`}
+                >
+                  YOUR SIDE
+                </button>
+                <button
+                  onClick={() => setPerspective('other')}
+                  className={`flex-1 rounded-lg py-2.5 text-[11px] font-black transition-all ${perspective === 'other' ? 'bg-zinc-800 text-white shadow-md' : 'text-zinc-500 opacity-50'}`}
+                >
+                  THEIR SIDE
+                </button>
               </div>
+            </div>
 
             <div className="border-t border-zinc-900 px-5 py-6">
               <div className="mb-4 flex items-center justify-between">
-                 <span className="text-[13px] font-bold">Chat Theme</span>
-                 <span className="text-[10px] font-black uppercase text-zinc-500">
-                   {themes.find((option) => option.id === theme)?.label || 'Custom'}
-                 </span>
+                <span className="text-[13px] font-bold">Chat Theme</span>
+                <span className="text-[10px] font-black uppercase text-zinc-500">
+                  {themes.find((option) => option.id === theme)?.label || 'Custom'}
+                </span>
               </div>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 {[
@@ -114,25 +269,59 @@ const SettingsOverlay = ({
               </div>
             </div>
 
-            <div className="flex border-b border-zinc-900 px-4">
-              {['MEDIA', 'REELS', 'LINKS'].map((tab) => (
-                <button 
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`relative flex-1 py-4 text-[11px] font-bold tracking-[0.1em] ${activeTab === tab ? 'text-white' : 'text-zinc-500'}`}
-                >
-                  {tab}
-                  {activeTab === tab && <div className="absolute bottom-0 left-0 right-0 h-[2px] rounded-t-full bg-white" />}
-                </button>
-              ))}
+            <div className="border-t border-zinc-900 px-4 pt-2">
+              <div className="flex gap-2">
+                {Object.entries(TAB_CONFIG).map(([tab, config]) => {
+                  const Icon = config.icon;
+
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-3 py-3 text-[12px] font-semibold transition ${
+                        activeTab === tab ? 'bg-white/10 text-white' : 'bg-white/[0.03] text-zinc-500'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="truncate">{config.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-0.5 p-0.5 pb-20">
-               {[...Array(9)].map((_, i) => (
-                 <div key={i} className="flex aspect-square items-center justify-center border border-black/10 bg-zinc-900">
-                    <span className="text-[9px] font-bold uppercase tracking-tighter text-zinc-700 opacity-40">{activeTab} {i+1}</span>
-                 </div>
-               ))}
+            <div
+              ref={gridRef}
+              onScroll={(event) => {
+                const element = event.currentTarget;
+                if (element.scrollTop + element.clientHeight >= element.scrollHeight - 120) {
+                  loadMoreForActiveTab();
+                }
+              }}
+              className="app-scrollbar max-h-[42dvh] overflow-y-auto p-4 pb-20"
+            >
+              <div className="mb-3 flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                {React.createElement(activeTabConfig.icon, { className: 'h-4 w-4' })}
+                <span>{activeTabConfig.label}</span>
+              </div>
+
+              {activeItems.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                  {activeItems.map((item) => (
+                    <MediaTile key={`${item.type}-${item.timestamp_ms}-${item.asset_uri || item.share_link}`} item={item} />
+                  ))}
+                </div>
+              ) : !tabLoading[activeTab] ? (
+                <div className="flex min-h-[180px] items-center justify-center text-sm text-zinc-500">
+                  No {activeTab.toLowerCase()} found in this conversation yet.
+                </div>
+              ) : null}
+
+              {tabLoading[activeTab] && (
+                <div className="mt-4 flex items-center justify-center">
+                  <LoaderCircle className="h-5 w-5 animate-spin text-zinc-400" />
+                </div>
+              )}
             </div>
           </div>
         </div>

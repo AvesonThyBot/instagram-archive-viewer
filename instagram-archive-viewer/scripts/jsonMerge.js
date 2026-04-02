@@ -1,3 +1,4 @@
+/* global Buffer, process */
 import fs from "fs";
 import path from "path";
 import readline from "readline";
@@ -17,7 +18,7 @@ function fixEncoding(obj) {
 	if (typeof obj === "string") {
 		try {
 			return Buffer.from(obj, "latin1").toString("utf8");
-		} catch (e) {
+		} catch {
 			return obj;
 		}
 	}
@@ -109,13 +110,8 @@ function processChat(dir, index, total) {
 			const cleanedData = fixEncoding(finalData);
 
 			// --- Output Selection ---
-<<<<<<< HEAD
 			// const finalJson = JSON.stringify(cleanedData, null, 2); // Readable
 			const finalJson = JSON.stringify(cleanedData); // Minified
-=======
-			const finalJson = JSON.stringify(cleanedData, null, 2); // Readable
-			// const finalJson = JSON.stringify(cleanedData); // Minified
->>>>>>> f895953f74c46f3d9a51c9aacf4293e74a3387f7
 			// ------------------------
 
 			stats.compressedSize += Buffer.byteLength(finalJson, "utf8");
@@ -147,7 +143,9 @@ function processExtras() {
 				stats.compressedSize += Buffer.byteLength(formatted, "utf8");
 				fs.writeFileSync(fullPath, formatted);
 				console.log(`   -> Optimized: ${file}`);
-			} catch (e) {}
+			} catch {
+				// Ignore malformed optional extra files so the main inbox import can keep going.
+			}
 		}
 	});
 }
@@ -186,6 +184,7 @@ async function run() {
 	console.log(`Optimization Results:`);
 	console.log(`   - Total Chats: ${stats.chatsProcessed}`);
 	console.log(`   - Data Size: ${formatBytes(stats.originalSize)} -> ${formatBytes(stats.compressedSize)}`);
+	console.log(`   - Space Saved: ${formatBytes(saved)}`);
 	console.log("------------------------------------------------\n");
 }
 
