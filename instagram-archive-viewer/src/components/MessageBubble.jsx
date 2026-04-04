@@ -23,7 +23,7 @@ function LazyMediaImage({ src, alt, className, imageClassName = '' }) {
   );
 }
 
-function AttachmentCard({ message, onOpenMedia }) {
+function AttachmentCard({ message, onOpenMedia, themeConfig }) {
   const asset = getMessagePrimaryAsset(message);
   const assetUrl = resolveArchiveUri(asset?.uri || message.asset_uri || message.share_link);
 
@@ -75,14 +75,14 @@ function AttachmentCard({ message, onOpenMedia }) {
       href={href || '#'}
       target={href ? '_blank' : undefined}
       rel={href ? 'noreferrer' : undefined}
-      className="flex items-center gap-3 rounded-[20px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white"
+      className={`flex items-center gap-3 rounded-[20px] border px-4 py-3 text-sm ${themeConfig.attachmentCard}`}
     >
-      <div className="rounded-full bg-white/10 p-2">
+      <div className={`rounded-full p-2 ${themeConfig.attachmentIcon}`}>
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
         <p className="truncate font-medium">{label}</p>
-        <p className="truncate text-xs text-zinc-400">
+        <p className={`truncate text-xs ${themeConfig.attachmentMeta}`}>
           {message.type === 'reel' ? 'Instagram reel' : message.type}
         </p>
       </div>
@@ -101,7 +101,7 @@ function formatAudioTime(seconds) {
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
-function AudioAttachment({ assetUrl, label }) {
+function AudioAttachment({ assetUrl, label, themeConfig }) {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -167,29 +167,29 @@ function AudioAttachment({ assetUrl, label }) {
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) * 100 : 0;
 
   return (
-    <div className="w-full rounded-[24px] border border-white/10 bg-[#2b1516]/85 px-4 py-3 text-white shadow-[0_14px_30px_rgba(0,0,0,0.18)]">
+    <div className={`w-full rounded-[24px] border px-4 py-3 shadow-[0_14px_30px_rgba(0,0,0,0.18)] ${themeConfig.audioCard}`}>
       <audio ref={audioRef} preload="metadata" src={assetUrl} />
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={togglePlayback}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[#4a2224] text-white"
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border ${themeConfig.audioButton}`}
           aria-label={isPlaying ? 'Pause audio message' : 'Play audio message'}
         >
           {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-[#d5b9ff]">
+          <p className={`truncate text-sm font-semibold ${themeConfig.audioAccent}`}>
             {label || 'Audio message'}
           </p>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div className={`mt-2 h-1.5 w-full overflow-hidden rounded-full ${themeConfig.audioTrack}`}>
             <div
-              className="h-full rounded-full bg-[#a78bfa] transition-[width] duration-150"
+              className={`h-full rounded-full transition-[width] duration-150 ${themeConfig.audioProgress}`}
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="mt-2 flex items-center justify-between text-xs text-white/60">
+          <div className={`mt-2 flex items-center justify-between text-xs ${themeConfig.audioMeta}`}>
             <span>audio</span>
             <span>{formatAudioTime(currentTime)} / {formatAudioTime(duration)}</span>
           </div>
@@ -202,6 +202,7 @@ function AudioAttachment({ assetUrl, label }) {
 const MessageBubble = ({
   message,
   isSender,
+  themeConfig,
   showAvatar,
   pfp,
   timestamp,
@@ -212,7 +213,7 @@ const MessageBubble = ({
   onToggleFavourite,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const bubbleColor = isSender ? 'bg-[#ff5a00]' : 'bg-[#740808]';
+  const bubbleColor = isSender ? themeConfig.senderBubble : themeConfig.receiverBubble;
   const hasText = Boolean(message.text_content);
   const isAttachmentOnly = !hasText && message.type !== 'text';
 
@@ -262,12 +263,18 @@ const MessageBubble = ({
 
         <div className="relative flex max-w-[82%] flex-col gap-2 md:max-w-[68%] lg:max-w-[58%]">
           {!isAttachmentOnly && (
-            <div className={`rounded-[24px] px-5 py-3 text-[15px] leading-[1.34] text-white shadow-[0_8px_30px_rgba(0,0,0,0.14)] ${bubbleColor} ${isFavourite ? 'ring-2 ring-[#ff7a93]/80 ring-offset-2 ring-offset-transparent' : ''}`}>
+            <div className={`rounded-[24px] px-5 py-3 text-[15px] leading-[1.34] shadow-[0_8px_30px_rgba(0,0,0,0.14)] ${bubbleColor} ${isFavourite ? 'ring-2 ring-[#ff7a93]/80 ring-offset-2 ring-offset-transparent' : ''}`}>
               {message.text_content || message.preview_text}
             </div>
           )}
 
-          {message.type !== 'text' && <AttachmentCard message={message} onOpenMedia={onOpenMedia} />}
+          {message.type !== 'text' && (
+            <AttachmentCard
+              message={message}
+              onOpenMedia={onOpenMedia}
+              themeConfig={themeConfig}
+            />
+          )}
 
           {(isHovered || isFavourite) && (
             <button

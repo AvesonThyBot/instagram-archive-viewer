@@ -4,8 +4,8 @@ import { themes as prismThemes } from "prism-react-renderer";
 /** @type {import('@docusaurus/types').Config} */
 const config = {
 	title: "Instagram Archive Viewer Docs",
-	tagline: "Run it locally, export it cleanly, or plan the hosted platform properly.",
-	favicon: "img/favicon.ico",
+	tagline: "Run it locally, export it cleanly, and host it with a privacy-first BYOD model.",
+	favicon: "img/iav-logo.svg",
 	future: {
 		v4: true,
 	},
@@ -34,7 +34,45 @@ const config = {
 		],
 	],
 	themeConfig: {
-		image: "img/docusaurus-social-card.jpg",
+		image: "img/iav-logo.svg",
+		metadata: [
+			{
+				name: "description",
+				content:
+					"Documentation for Instagram Archive Viewer, including setup, SQLite archive builds, self-hosting, Cloudflare deployment, and the BYOD hosted platform model.",
+			},
+			{
+				name: "keywords",
+				content:
+					"Instagram Archive Viewer docs, Instagram export viewer, Cloudflare Pages, R2, BYOD archive platform, SQLite archive",
+			},
+			{
+				property: "og:title",
+				content: "Instagram Archive Viewer Docs",
+			},
+			{
+				property: "og:description",
+				content:
+					"Setup, deployment, privacy, and hosted-platform documentation for Instagram Archive Viewer.",
+			},
+			{
+				property: "og:image",
+				content: "https://archive-docs.aveson.co.uk/img/iav-logo.svg",
+			},
+			{
+				name: "twitter:card",
+				content: "summary",
+			},
+			{
+				name: "twitter:title",
+				content: "Instagram Archive Viewer Docs",
+			},
+			{
+				name: "twitter:description",
+				content:
+					"Learn how to run, export, deploy, and host Instagram Archive Viewer properly.",
+			},
+		],
 		colorMode: {
 			defaultMode: "dark",
 			disableSwitch: false,
@@ -72,6 +110,12 @@ const config = {
 					activeBaseRegex: "^/platform/",
 				},
 				{
+					to: "/community/faq",
+					label: "Community",
+					position: "left",
+					activeBaseRegex: "^/community/",
+				},
+				{
 					href: "https://github.com/avesonthybot",
 					position: "right",
 					className: "header-github-link",
@@ -102,10 +146,7 @@ const config = {
 					title: "Links",
 					items: [
 						{ label: "Main site", href: "https://archive.aveson.co.uk" },
-						{
-							label: "Repository",
-							href: "https://github.com/avesonthybot",
-						},
+						{ label: "Repository", href: "https://github.com/avesonthybot" },
 					],
 				},
 			],
