@@ -1,89 +1,219 @@
-# Instagram Archives Viewer
+# Instagram Archive Viewer
 
-A clean, easy-to-use web interface for viewing exported Instagram chat history. This project takes raw JSON data and turns it into a readable, searchable archive that looks and feels like the native app.
+Instagram Archive Viewer is a private-first viewer for exported Instagram DMs. It turns raw archive data into a cleaner inbox, a faster chat experience, and a much better search workflow than digging through JSON manually.
 
----
+The long-term direction of the project is a **Bring Your Own Data** platform:
 
-## 📖 Description
+- users can run everything locally
+- users can export a smaller static version and host it themselves
+- users can later connect their own hosted encrypted bundle to `archive.aveson.co.uk`
 
-**Instagram Archive Viewer** was created to solve a critical data-loss issue. Instagram includes a "Delete Chat" feature that permanently wipes conversation history for both parties; additionally, many users report bugs where entire chat histories vanish without warning or user action.
+## Why this project exists
 
-By using a JSON data export from the recipient's side, you can restore and view messages in a professional layout that mirrors the original experience.
+Instagram exports are useful, but the raw format is not pleasant to browse. This project rebuilds the archive into:
 
-Even if your data hasn't been deleted, this tool serves as a **powerful alternative to Instagram's native search engine**. It provides a much faster, more precise way to navigate thousands of messages with full local privacy. The viewer automatically groups consecutive messages, adjusts bubble corners for a "tail" effect, and aligns text based on your chosen perspective.
+- `inbox_index.json` for fast conversation previews
+- `archive.sqlite` for fast message loading and search
+- an Instagram-inspired UI for inbox, chat, media, favourites, and search overlays
 
----
+The result is both a recovery tool and a better archive browser.
 
-## 🎯 Purpose
+## The three output tiers
 
-The project serves three primary goals:
+The project is designed around three ways to use it.
 
-- **Data Redundancy**: Protect against accidental deletions or platform bugs by viewing external backups in a native-feeling UI.
-- **Superior Search**: A high-performance search engine that far outclasses the limited and often slow search functionality within the Instagram app.
-- **Full Privacy**: Your data never leaves your machine. The viewer runs locally, processing your JSON export without uploading it to any server.
+| Tier | Format | Best for | Storage model |
+| --- | --- | --- | --- |
+| Developer | Full source project | contributors and technical users | local or self-hosted |
+| Static Export | built app + selected data | users with their own Pages/VPS hosting | user-hosted static deployment |
+| Cloud Service | hosted web app | general users | remote object storage + encrypted references |
 
----
+### 1. Full source project
 
-## 🛠️ Built With
+This is the current contributor workflow.
 
-- **React**: For the core interface and state management.
-- **Tailwind CSS**: For the styling and mobile-responsive layout.
-- **Lucide React**: For the iconography.
+- run locally
+- develop features
+- test with your own archive
+- build trimmed exports
 
----
+### 2. Static export
 
-## 📥 How to Get Your Data
+This is the self-hosting workflow.
 
-To use this viewer, you need to request your data from Instagram:
+- choose the conversations you want
+- rebuild `inbox_index.json`
+- rebuild `archive.sqlite`
+- remove unnecessary source files like raw `messages.json`
+- host the result on your own infrastructure
 
-1. Go to **Instagram Settings** > **Your Activity** > **Download Your Information**.
-2. Select **Some of your information**.
-3. Choose **Messages** from the list.
-4. Set the format to **JSON** (HTML will not work with this viewer).
-5. Select your date range and click **Request Download**.
-6. Once the email arrives, download and unzip the folder.
+### 3. Hosted BYOD platform
 
----
+This is the future model for `archive.aveson.co.uk`.
 
-## 🚀 How to Use It
+The goal is to keep your server costs low and the privacy model strong by storing only what the platform actually needs:
 
-### 1. Installation & Setup
+- account data
+- metadata
+- encrypted bundle references
 
-To get the viewer running locally:
+The platform should **not** store the user's archive contents by default.
 
+## Architecture direction
+
+The current app already uses the right shape for this future:
+
+```text
+Instagram export
+  -> normalize into inbox_index.json
+  -> normalize into archive.sqlite
+  -> selective export trims data
+  -> static or hosted viewer loads the derived files
 ```
-git clone https://github.com/AvesonThyBot/instagram-archive-viewer.git
+
+That keeps runtime simpler and makes it practical to support both self-hosting and hosted access later.
+
+## Recommended storage layer for the hosted platform
+
+For the future BYOD hosted flow, **Cloudflare R2** is the best default recommendation.
+
+### Why R2 fits well
+
+- **Zero egress fees**: important because the frontend will download the archive bundle to the browser.
+- **Good fit with Cloudflare Pages**: ideal if the frontend is also hosted on Cloudflare.
+- **CORS friendly**: easier to lock requests down to your frontend origin.
+- **Low cost**: strong for a privacy-focused side project or early product.
+
+## Security model
+
+The strongest version of this platform is **client-side encrypted BYOD**.
+
+### Recommended flow
+
+1. The user runs a local export script.
+2. The script builds a hosted-ready bundle.
+3. The script asks for a master password.
+4. The bundle is encrypted locally before upload.
+5. The user uploads the encrypted bundle to their own object storage.
+6. The user gives the hosted app the bundle location.
+7. The frontend downloads, decrypts, decompresses, and opens the archive locally in the browser.
+
+### Why this is strong
+
+- you do not need to store their archive data
+- your backend does not need to parse or process the archive
+- the user's storage provider only sees encrypted blobs
+- the browser does the expensive work instead of your server
+
+## What should be stored in the database
+
+For the future hosted platform, the database should contain only:
+
+- account identity
+- auth metadata
+- encrypted storage pointer or encrypted object key
+- timestamps and light bundle metadata
+
+It should not contain:
+
+- raw archive contents
+- decrypted permanent archive URLs
+- copied DM media libraries by default
+
+## Key handling recommendation
+
+If you want the strongest privacy story, the user should provide the archive password each session and you should not persist it.
+
+If you later decide to persist a storage key or reference, encrypt it at the application layer before writing it to the database. Database-at-rest encryption alone is not enough for this use case.
+
+## Future export script direction
+
+The future export script should produce a single hosted-ready archive bundle, ideally:
+
+```text
+archive-bundle.tar.gz
+```
+
+The bundle should include:
+
+- `inbox_index.json`
+- `archive.sqlite`
+- only the selected media files required by the chosen conversations
+
+It should remove:
+
+- raw `messages.json` files after verification
+- source-only setup files
+- anything not needed at runtime
+
+## Example future export flow
+
+```bash
+# 1. Build runtime data
+node scripts/buildInboxIndex.js
+node scripts/buildMessageDatabase.js
+
+# 2. Stage only runtime files and selected media
+# 3. Remove unnecessary raw JSON
+# 4. Compress into a hosted bundle
+tar -czf archive-bundle.tar.gz export/
+```
+
+## Performance note
+
+Because the hosted client will decrypt, decompress, and process the bundle in the browser, large archives can require substantial device memory. A large archive may briefly need far more memory than the final SQLite file size suggests.
+
+That means the product should eventually include:
+
+- a visible loading screen
+- decompression progress
+- archive hydration progress
+- clear messaging on large bundle sizes
+
+## Media access and CORS
+
+If media lives in user-controlled storage, the docs and product should explain how to allow the frontend origin to fetch those files safely.
+
+For example, if the hosted app lives at:
+
+```text
+https://archive.aveson.co.uk
+```
+
+the storage configuration will usually need to allow that origin for asset fetches.
+
+## Local setup
+
+```bash
+git clone https://github.com/avesonthybot/instagram-archive-viewer.git
 cd instagram-archive-viewer
 npm install
-```
-
-### 2. Import Your Chat
-
-You can use the `install.sh` script to automatically move and format your export data. This script accepts both absolute and relative paths.
-
-```
-chmod +x install.sh
-./install.sh {path/to/instagram/export/folder} {path/to/archive-viewer/folder}
-```
-
-### 3. Run the Viewer
-
-```
 npm run dev
 ```
 
----
+## Self-hosting today
 
-## ✨ Features & Planned Features
+The current project already supports building a static app:
 
-### Current Features
+```bash
+npm run build
+```
 
-- **Perspective Toggle**: Instantly flip the UI between "User 1" and "User 2" views.
-- **Privacy Focused**: Processes data locally; no cloud uploads required.
-- **Details Overlay**: A slide-up menu to see settings and shared media etc.
+That output can be deployed to platforms like Cloudflare Pages.
 
-### Planned Features
+## Documentation
 
-- **Power Search**: Advanced filtering by date, keyword, and media type.
-- **Media Support**: Integration for viewing high-resolution images and videos from the export folder.
-- **Theme Support**: Options to switch between Dark, Light, and custom colored modes.
+Detailed docs live in [`/docs`](C:/Users/Aveson/Documents/Development/Instagram%20Archive%20Viewer/docs) and now cover:
+
+- local setup
+- viewer behavior
+- selective export
+- self-hosting
+- Cloudflare Pages and Zero Trust recommendations
+- the future BYOD hosted architecture
+- privacy and security reasoning
+
+## Main links
+
+- GitHub: [github.com/avesonthybot](https://github.com/avesonthybot)
+- Future hosted app: [archive.aveson.co.uk](https://archive.aveson.co.uk)

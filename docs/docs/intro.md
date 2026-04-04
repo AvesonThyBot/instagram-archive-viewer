@@ -1,59 +1,84 @@
 ---
 sidebar_position: 1
+title: Overview
 ---
 
-# Welcome to Instagram Archive Viewer Docs
+# Instagram Archive Viewer
 
-This documentation accompanies the **Instagram Archive Viewer** project – a lightweight web
-interface for exploring exported Instagram chat history in a readable, searchable format.
+Instagram Archive Viewer is a private-first way to explore an exported Instagram DM archive with a UI that feels closer to the live app than a raw folder of JSON files ever will.
 
-### Why this exists
+The current project already supports:
 
-Instagram provides no built‑in way to restore or analyse old conversations once they have been
-deleted. This tool lets you work from an official JSON export, giving you full local control over
-your data and a speedy search experience that mimics the native app.
+- an Instagram-inspired inbox and chat layout
+- SQLite-backed message loading and search
+- selective export of chosen conversations
+- media browsing, favourites, themes, and perspective switching
+- local profile-picture overrides for missing direct-message avatars
 
-The viewer was originally created to recover lost chats after an account was wiped, but it has
-since evolved into a general‑purpose archive browser with features such as perspective toggling,
-message grouping, and media previews.
+This docs site covers two things at once:
 
-Here you'll find guides on how to prepare your data, import archives, and customize the viewer
-for your needs. The docs are organized into folders; use the dropdown in the navbar (now labeled
-"Docs") to navigate between sections.
+1. how to use and ship the project as it exists today
+2. how to design the future hosted platform responsibly
 
-## Getting started
+## The project in one sentence
 
-1. Request your Instagram data export as **JSON** (messages only).
-2. Place the download in the `public/data` folder or run the `install.sh` helper script.
-3. Launch the application:
+You start with an Instagram export, normalize it into a searchable local dataset, and then browse it through a faster, more focused interface.
 
-   ```bash
-   cd instagram-archive-viewer
-   npm install     # first run
-   npm run dev
-   ```
+## Current architecture at a glance
 
-   Open the URL shown in your terminal (typically `http://localhost:5173`).
+```text
+Instagram export
+  -> inbox folders + messages.json
+  -> build scripts create inbox_index.json
+  -> build scripts create archive.sqlite
+  -> Vite app loads inbox + SQLite
+  -> user browses, searches, exports, and customizes locally
+```
 
-## Need help?
+## What the docs are organised around
 
-- The **Installation** section in the sidebar covers downloading data, using the script, and
-  launching the project.
-- If you encounter problems, the **Troubleshooting** page under the “Instagram Archive Viewer”
-  category will walk you through common fixes.
-- For contributors or developers, check the **Community** folder for guidelines, FAQs, and notes.
-  Note that the **Community** category now lives at the top level of the sidebar rather
-  than under the Instagram Archive Viewer section; it contains contribution instructions,
-  a FAQ, and dev notes.
+### Installation
 
-## Tips & best practices
+Use this section when you need to get from a raw Instagram download to a working local app.
 
-- Your data never leaves your computer – everything runs locally in the browser.
-- Style adjustments belong in `src/css/custom.css`; the minimal theme keeps only necessary
-  elements so your custom CSS has priority.
-- Organize future docs using subfolders; the sidebar will auto‑generate a dropdown list.
+### Viewer Guide
 
----
+Use this section when you want to understand how the inbox, message loading, search, overlays, export, themes, and settings behave.
 
-_Start by selecting a section from the sidebar above, or review the “Installation” guide to get
-up and running._
+### Deployment
+
+Use this section when you want to host a static copy yourself, prepare a trimmed export, or plan the future `.tar.gz` style bundle flow.
+
+### Hosted Platform
+
+Use this section for the product roadmap around `archive.aveson.co.uk`, account systems, Supabase metadata, encrypted storage links, and privacy boundaries.
+
+## Recommended ways to use the project
+
+### Option 1: Fully local
+
+Best for personal use, privacy, and fast iteration while building the product.
+
+### Option 2: Export a smaller hosted copy
+
+Best when someone only wants a few conversations in a shareable or personal hosted build.
+
+### Option 3: Future hosted platform
+
+Best when you want sign-in, a polished product flow, and a user-owned storage model without storing archive contents on your own infrastructure.
+
+## Design principles behind the project
+
+- **Local first**: the archive should work without needing a remote database.
+- **Selective export**: the user should only ship the conversations they choose.
+- **Readable at scale**: message search and loading should stay responsive on large archives.
+- **Privacy over convenience**: the safest design stores less, not more.
+- **Host-agnostic data**: the app can point at a bundle hosted somewhere else later.
+
+## Read this next
+
+- [Download your Instagram data](/installation/downloading-data)
+- [Run the project locally](/installation/running-project)
+- [Viewer usage guide](/instagram-archive-viewer/usage)
+- [Self-hosting guide](/deployment/self-hosting)
+- [Hosted platform plan](/platform/hosted-service)

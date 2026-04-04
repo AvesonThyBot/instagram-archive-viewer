@@ -1,81 +1,149 @@
-/**
- * Modern Minimalist Theme - Clean & Simple
- */
-
-/* Light Mode: Slate & Indigo */
 :root {
-	--ifm-color-primary: #3f51b5; /* Indigo */
-	--ifm-color-primary-dark: #3949ab;
-	--ifm-color-primary-darker: #303f9f;
-	--ifm-color-primary-darkest: #1a237e;
-	--ifm-color-primary-light: #5c6bc0;
-	--ifm-color-primary-lighter: #7986cb;
-	--ifm-color-primary-lightest: #9fa8da;
-
-	--ifm-background-color: #ffffff;
-	--ifm-navbar-background-color: #ffffff;
-	--ifm-footer-background-color: #f8f9fa; /* slightly off-white to match header */
-	--ifm-footer-link-color: var(--ifm-color-primary);
-	--ifm-code-font-size: 90%;
-	--docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+	--ifm-font-family-base: "Inter", "Segoe UI", system-ui, sans-serif;
+	--ifm-heading-font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+	--ifm-code-font-size: 92%;
+	--ifm-background-color: #0d1017;
+	--ifm-background-surface-color: #141923;
+	--ifm-navbar-background-color: rgba(13, 16, 23, 0.88);
+	--ifm-footer-background-color: #0c0f15;
+	--ifm-card-background-color: #161b25;
+	--ifm-toc-border-color: rgba(255, 255, 255, 0.08);
+	--ifm-color-emphasis-100: #171d28;
+	--ifm-color-emphasis-200: #1c2330;
+	--ifm-color-emphasis-300: #273244;
+	--ifm-color-emphasis-600: #98a0b3;
+	--ifm-color-emphasis-700: #c2c8d6;
+	--ifm-color-emphasis-800: #e4e8ef;
+	--ifm-color-emphasis-900: #f8f9fc;
+	--ifm-color-primary: #ff7a1a;
+	--ifm-color-primary-dark: #eb6907;
+	--ifm-color-primary-darker: #da5f06;
+	--ifm-color-primary-darkest: #b94f00;
+	--ifm-color-primary-light: #ff8b3f;
+	--ifm-color-primary-lighter: #ff9c5f;
+	--ifm-color-primary-lightest: #ffc18f;
+	--ifm-link-color: #ff9c5f;
+	--ifm-menu-color-active: #fff3eb;
+	--ifm-menu-color-background-active: rgba(255, 122, 26, 0.14);
+	--ifm-menu-color-background-hover: rgba(255, 255, 255, 0.05);
+	--ifm-code-background: rgba(255, 255, 255, 0.05);
+	--ifm-pre-background: #10141c;
+	--ifm-global-shadow-lw: 0 10px 40px rgba(0, 0, 0, 0.28);
+	--docusaurus-highlighted-code-line-bg: rgba(255, 122, 26, 0.12);
 }
 
-/* Dark Mode: Deep Charcoal & Soft Blue */
 [data-theme="dark"] {
-	--ifm-color-primary: #818cf8; /* Soft Indigo */
-	--ifm-color-primary-dark: #6366f1;
-	--ifm-color-primary-darker: #4f46e5;
-	--ifm-color-primary-darkest: #3730a3;
-	--ifm-color-primary-light: #a5b4fc;
-	--ifm-color-primary-lighter: #c7d2fe;
-	--ifm-color-primary-lightest: #e0e7ff;
-
-	/* Use a dark charcoal instead of pure black for better readability */
-	--ifm-background-color: #0f172a;
-	--ifm-navbar-background-color: #1e293b;
-	--ifm-footer-background-color: #1e293b;
-	--ifm-footer-link-color: var(--ifm-color-primary-light);
-	--ifm-card-background-color: #1e293b;
-
-	--docusaurus-highlighted-code-line-bg: rgba(255, 255, 255, 0.1);
-
-	--ifm-toc-border-color: #334155;
-	--ifm-contents-border-color: #334155;
+	--ifm-background-color: #0d1017;
 }
 
-/* ensure footer uses the variable */
-.footer {
-	background-color: var(--ifm-footer-background-color) !important;
-	color: var(--ifm-color-gray-700);
+html {
+	scroll-behavior: smooth;
 }
 
-/* ensure some spacing between theme toggle and github icon */
-.header-github-link {
-	margin-left: 0.5rem;
+body {
+	background:
+		radial-gradient(circle at top right, rgba(255, 122, 26, 0.12), transparent 26%),
+		radial-gradient(circle at top left, rgba(191, 35, 94, 0.12), transparent 24%),
+		#0d1017;
 }
-/* Cleaner UI Elements */
+
 .navbar {
-	box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	backdrop-filter: blur(18px);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+	box-shadow: none;
+}
+
+.navbar__brand {
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+
+.theme-doc-sidebar-menu {
+	padding: 1rem 0.75rem;
+}
+
+.menu__link {
+	border-radius: 16px;
+}
+
+.menu__link--active {
+	box-shadow: inset 0 0 0 1px rgba(255, 122, 26, 0.18);
+}
+
+.main-wrapper {
+	position: relative;
+}
+
+.main-wrapper::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	pointer-events: none;
+	background:
+		linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 12%),
+		linear-gradient(135deg, rgba(255, 122, 26, 0.04), transparent 35%);
+}
+
+.markdown > h1,
+.markdown > h2,
+.markdown > h3 {
+	letter-spacing: -0.03em;
+}
+
+.theme-doc-markdown {
+	background: rgba(20, 25, 35, 0.78);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 28px;
+	box-shadow: var(--ifm-global-shadow-lw);
+	padding: 2rem;
+}
+
+@media screen and (max-width: 996px) {
+	.theme-doc-markdown {
+		padding: 1.25rem;
+		border-radius: 22px;
+	}
+}
+
+.alert,
+.admonition {
+	border: 1px solid rgba(255, 255, 255, 0.07);
+	border-radius: 20px;
+	box-shadow: none;
 }
 
 code {
-	background-color: rgba(63, 81, 181, 0.1);
-	border: 1px solid rgba(63, 81, 181, 0.2);
-	padding: 2px 4px;
-	border-radius: 6px;
-	font-family: "Fira Code", monospace;
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 10px;
+	padding: 0.15rem 0.45rem;
 }
 
-[data-theme="dark"] code {
-	background-color: rgba(129, 140, 248, 0.1);
-	border: 1px solid rgba(129, 140, 248, 0.2);
+pre code {
+	border: 0;
+	background: transparent;
 }
 
-.admonition {
-	border-radius: 8px;
+.pagination-nav__link {
+	background: rgba(20, 25, 35, 0.88);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 22px;
 }
 
-/* GitHub Icon in Navbar */
+.table-of-contents {
+	border-left: 1px solid rgba(255, 255, 255, 0.08);
+	padding-left: 1rem;
+}
+
+.footer {
+	background-color: var(--ifm-footer-background-color) !important;
+	border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.header-github-link {
+	margin-left: 0.5rem;
+}
+
 .header-github-link:before {
 	content: "";
 	width: 24px;
@@ -86,5 +154,5 @@ code {
 }
 
 [data-theme="dark"] .header-github-link:before {
-	filter: invert(100%); /* Makes the black SVG white in dark mode */
+	filter: invert(100%);
 }

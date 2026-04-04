@@ -1,64 +1,48 @@
-import clsx from 'clsx';
-import Heading from '@theme/Heading';
-import styles from './styles.module.css';
+import Heading from "@theme/Heading";
+import styles from "./styles.module.css";
 
-const FeatureList = [
-  {
-    title: 'Easy to Use',
-    Svg: require('@site/static/img/undraw_docusaurus_mountain.svg').default,
-    description: (
-      <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
-      </>
-    ),
-  },
-  {
-    title: 'Focus on What Matters',
-    Svg: require('@site/static/img/undraw_docusaurus_tree.svg').default,
-    description: (
-      <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
-      </>
-    ),
-  },
-  {
-    title: 'Powered by React',
-    Svg: require('@site/static/img/undraw_docusaurus_react.svg').default,
-    description: (
-      <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
-      </>
-    ),
-  },
+const featureList = [
+	{
+		title: "Local-first viewer",
+		description:
+			"Understand the current app architecture, SQLite pipeline, selective exports, and the local privacy model before you host anything.",
+	},
+	{
+		title: "Self-hosted packages",
+		description:
+			"Follow the deployment guides for static builds, Cloudflare Pages, Wrangler, and a cleaner hosted copy that only includes the chosen DMs.",
+	},
+	{
+		title: "Hosted roadmap",
+		description:
+			"Document the future service at archive.aveson.co.uk, including OAuth, Supabase metadata, encrypted storage links, and user-owned archive bundles.",
+	},
 ];
 
-function Feature({Svg, title, description}) {
-  return (
-    <div className={clsx('col col--4')}>
-      <div className="text--center">
-        <Svg className={styles.featureSvg} role="img" />
-      </div>
-      <div className="text--center padding-horiz--md">
-        <Heading as="h3">{title}</Heading>
-        <p>{description}</p>
-      </div>
-    </div>
-  );
+function Feature({ title, description }) {
+	return (
+		<article className={styles.featureCard}>
+			<div className={styles.featureBadge} />
+			<Heading as="h3">{title}</Heading>
+			<p>{description}</p>
+		</article>
+	);
 }
 
 export default function HomepageFeatures() {
-  return (
-    <section className={styles.features}>
-      <div className="container">
-        <div className="row">
-          {FeatureList.map((props, idx) => (
-            <Feature key={idx} {...props} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
+	return (
+		<section className={styles.features}>
+			<div className="container">
+				<div className={styles.header}>
+					<p className={styles.kicker}>What this docs site covers</p>
+					<Heading as="h2">A practical manual for the viewer today and the platform later.</Heading>
+				</div>
+				<div className={styles.grid}>
+					{featureList.map((feature) => (
+						<Feature key={feature.title} {...feature} />
+					))}
+				</div>
+			</div>
+		</section>
+	);
 }
