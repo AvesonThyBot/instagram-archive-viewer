@@ -249,7 +249,7 @@ const SettingsOverlay = ({
                   {themes.find((option) => option.id === theme)?.label || 'Custom'}
                 </span>
               </div>
-              <div className="flex flex-col gap-3 md:grid md:grid-cols-3">
+              <div className="flex flex-col gap-3">
                 {[
                   { id: 'sunset', swatch: 'from-[#2a0000] via-[#511010] to-[#ff5a2f]' },
                   { id: 'classic', swatch: 'from-[#111111] via-[#1d1d1f] to-[#303030]' },
@@ -261,12 +261,12 @@ const SettingsOverlay = ({
                     key={option.id}
                     type="button"
                     onClick={() => setTheme(option.id)}
-                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition md:block ${
+                    className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${
                       theme === option.id ? 'border-white/40 bg-white/8' : 'border-white/10 bg-white/[0.03]'
                     }`}
                   >
-                    <div className={`h-12 w-12 shrink-0 rounded-xl bg-gradient-to-br md:h-16 md:w-full ${option.swatch}`} />
-                    <div className="min-w-0 text-xs font-semibold text-white md:mt-2">
+                    <div className={`h-12 w-12 shrink-0 rounded-xl bg-gradient-to-br ${option.swatch}`} />
+                    <div className="min-w-0 text-xs font-semibold text-white">
                       {themes.find((themeOption) => themeOption.id === option.id)?.label || option.id}
                     </div>
                   </button>

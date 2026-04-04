@@ -32,6 +32,18 @@ const CHAT_THEMES = {
     header: 'bg-[#240202]',
     body: 'bg-[linear-gradient(180deg,#4c0303_0%,#330202_38%,#210101_100%)]',
     composer: 'bg-[#3a1f1d]/88',
+    latestButton: 'border-white/18 bg-[#12151d] text-white',
+    senderBubble: 'bg-[#ff5a00] text-white',
+    receiverBubble: 'bg-[#740808] text-white',
+    attachmentCard: 'border-white/10 bg-white/[0.04] text-white',
+    attachmentIcon: 'bg-white/10 text-white',
+    attachmentMeta: 'text-zinc-300',
+    audioCard: 'border-white/10 bg-[#2b1516]/85 text-white',
+    audioButton: 'border-white/10 bg-[#4a2224] text-white',
+    audioAccent: 'text-[#d5b9ff]',
+    audioTrack: 'bg-white/10',
+    audioProgress: 'bg-[#a78bfa]',
+    audioMeta: 'text-white/60',
   },
   classic: {
     label: 'Direct Classic',
@@ -39,6 +51,18 @@ const CHAT_THEMES = {
     header: 'bg-[#0b0e13]',
     body: 'bg-[linear-gradient(180deg,#171b23_0%,#0d1016_38%,#07080b_100%)]',
     composer: 'bg-[#171b23]/92',
+    latestButton: 'border-white/16 bg-[#11161f] text-white',
+    senderBubble: 'bg-[#2563eb] text-white',
+    receiverBubble: 'bg-[#1e293b] text-white',
+    attachmentCard: 'border-white/10 bg-[#131a24] text-white',
+    attachmentIcon: 'bg-white/8 text-white',
+    attachmentMeta: 'text-zinc-400',
+    audioCard: 'border-white/10 bg-[#131a24] text-white',
+    audioButton: 'border-white/10 bg-[#1d2633] text-white',
+    audioAccent: 'text-[#93c5fd]',
+    audioTrack: 'bg-white/10',
+    audioProgress: 'bg-[#60a5fa]',
+    audioMeta: 'text-white/60',
   },
   ocean: {
     label: 'Cobalt',
@@ -46,6 +70,18 @@ const CHAT_THEMES = {
     header: 'bg-[#09111f]',
     body: 'bg-[linear-gradient(180deg,#12345a_0%,#0b2340_36%,#07111f_100%)]',
     composer: 'bg-[#11243a]/92',
+    latestButton: 'border-white/16 bg-[#10253e] text-white',
+    senderBubble: 'bg-[#f8fafc] text-[#0f2440]',
+    receiverBubble: 'bg-[#17355b] text-white',
+    attachmentCard: 'border-white/10 bg-[#10253e] text-white',
+    attachmentIcon: 'bg-white/10 text-white',
+    attachmentMeta: 'text-slate-300',
+    audioCard: 'border-white/10 bg-[#10253e] text-white',
+    audioButton: 'border-white/10 bg-[#17355b] text-white',
+    audioAccent: 'text-[#bfdbfe]',
+    audioTrack: 'bg-white/10',
+    audioProgress: 'bg-[#93c5fd]',
+    audioMeta: 'text-slate-300',
   },
   monochrome: {
     label: 'Monochrome',
@@ -53,6 +89,18 @@ const CHAT_THEMES = {
     header: 'bg-[#0a0a0a]',
     body: 'bg-[linear-gradient(180deg,#1d1d1d_0%,#101010_38%,#070707_100%)]',
     composer: 'bg-[#1a1a1a]/92',
+    latestButton: 'border-white/16 bg-[#171717] text-white',
+    senderBubble: 'bg-[#f4f4f5] text-[#111111]',
+    receiverBubble: 'bg-[#242424] text-white',
+    attachmentCard: 'border-white/10 bg-[#191919] text-white',
+    attachmentIcon: 'bg-white/10 text-white',
+    attachmentMeta: 'text-zinc-400',
+    audioCard: 'border-white/10 bg-[#191919] text-white',
+    audioButton: 'border-white/10 bg-[#2b2b2b] text-white',
+    audioAccent: 'text-zinc-200',
+    audioTrack: 'bg-white/10',
+    audioProgress: 'bg-zinc-200',
+    audioMeta: 'text-zinc-400',
   },
   aurora: {
     label: 'Love',
@@ -60,6 +108,18 @@ const CHAT_THEMES = {
     header: 'bg-[#0b0820]',
     body: 'bg-[linear-gradient(180deg,#4b1458_0%,#2a0c37_40%,#14071c_100%)]',
     composer: 'bg-[#31153d]/92',
+    latestButton: 'border-white/16 bg-[#261230] text-white',
+    senderBubble: 'bg-[#ff77b7] text-[#2f0b24]',
+    receiverBubble: 'bg-[#61164f] text-white',
+    attachmentCard: 'border-white/10 bg-[#261230] text-white',
+    attachmentIcon: 'bg-white/10 text-white',
+    attachmentMeta: 'text-fuchsia-100/80',
+    audioCard: 'border-white/10 bg-[#261230] text-white',
+    audioButton: 'border-white/10 bg-[#61164f] text-white',
+    audioAccent: 'text-[#ffd0eb]',
+    audioTrack: 'bg-white/10',
+    audioProgress: 'bg-[#ff8cc5]',
+    audioMeta: 'text-fuchsia-100/75',
   },
 };
 
@@ -614,6 +674,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
                     key={message.message_id}
                     message={message}
                     isSender={isSender}
+                    themeConfig={themeClasses}
                     showAvatar={!isSender && isLastInGroup}
                     pfp={conversationImage || null}
                     timestamp={formatBubbleTimestamp(message.timestamp_ms)}
@@ -635,7 +696,7 @@ const ChatPage = ({ conversation, ownerName, onBackToInbox }) => {
           <button
             type="button"
             onClick={scrollToLatest}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/18 bg-[#12151d] px-4 py-2 text-sm text-white shadow-[0_14px_32px_rgba(0,0,0,0.22)]"
+            className={`pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm shadow-[0_14px_32px_rgba(0,0,0,0.22)] ${themeClasses.latestButton}`}
           >
             <ChevronsDown className="h-4 w-4" />
             <span>Back to latest chat</span>

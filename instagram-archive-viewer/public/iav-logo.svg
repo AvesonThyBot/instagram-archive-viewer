@@ -1,0 +1,16 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iavGlow" x1="20" y1="16" x2="108" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF8A2D"/>
+      <stop offset="0.55" stop-color="#FF5D1A"/>
+      <stop offset="1" stop-color="#BF235E"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="32" fill="#111722"/>
+  <rect x="10.75" y="10.75" width="106.5" height="106.5" rx="31.25" stroke="url(#iavGlow)" stroke-opacity="0.55" stroke-width="1.5"/>
+  <path d="M36 37C36 33.6863 38.6863 31 42 31H86C89.3137 31 92 33.6863 92 37V91C92 94.3137 89.3137 97 86 97H42C38.6863 97 36 94.3137 36 91V37Z" fill="#0D1017"/>
+  <path d="M49 45H57V84H49V45Z" fill="url(#iavGlow)"/>
+  <path d="M64 45H72V84H64V45Z" fill="#F6F8FC"/>
+  <path d="M79 45H87V84H79V45Z" fill="url(#iavGlow)"/>
+  <rect x="43" y="89" width="42" height="3" rx="1.5" fill="url(#iavGlow)" fill-opacity="0.9"/>
+</svg>
