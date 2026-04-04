@@ -1,23 +1,151 @@
-/**
- * CSS files with the .module.css suffix will be treated as CSS modules
- * and scoped locally.
- */
-
 .heroBanner {
-  padding: 4rem 0;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
+	padding: 3rem 0 1rem;
 }
 
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
+.heroShell {
+	display: grid;
+	grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+	gap: 1.5rem;
+	align-items: stretch;
+}
+
+.heroCopy,
+.heroCard {
+	background: rgba(20, 25, 35, 0.84);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	border-radius: 28px;
+	box-shadow: 0 24px 80px rgba(0, 0, 0, 0.28);
+}
+
+.heroCopy {
+	padding: 2rem;
+}
+
+.eyebrow {
+	color: #ffb173;
+	font-size: 0.88rem;
+	font-weight: 700;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+}
+
+.title {
+	font-size: clamp(2.5rem, 4vw, 4.6rem);
+	line-height: 0.95;
+	letter-spacing: -0.05em;
+	margin-bottom: 1rem;
+}
+
+.subtitle {
+	font-size: 1.05rem;
+	color: #c0c7d6;
+	max-width: 52ch;
+	margin-bottom: 1.5rem;
 }
 
 .buttons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.8rem;
+}
+
+.heroCard {
+	overflow: hidden;
+}
+
+.heroCardHeader {
+	display: flex;
+	gap: 0.5rem;
+	padding: 1rem 1rem 0;
+}
+
+.heroDot {
+	width: 0.75rem;
+	height: 0.75rem;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.14);
+}
+
+.heroCardBody {
+	padding: 1rem;
+}
+
+.chatHeader {
+	display: flex;
+	align-items: center;
+	gap: 0.85rem;
+	margin-bottom: 1rem;
+}
+
+.chatHeader span {
+	display: block;
+	color: #8f9ab0;
+	font-size: 0.9rem;
+}
+
+.avatar {
+	width: 3rem;
+	height: 3rem;
+	border-radius: 999px;
+	background: linear-gradient(145deg, #ff9f54, #bf235e);
+}
+
+.bubbleRowRight,
+.bubbleRowLeft {
+	display: flex;
+	margin-bottom: 0.8rem;
+}
+
+.bubbleRowRight {
+	justify-content: flex-end;
+}
+
+.sentBubble,
+.receivedBubble {
+	max-width: 24rem;
+	border-radius: 22px;
+	padding: 0.85rem 1rem;
+	font-size: 0.95rem;
+	line-height: 1.45;
+}
+
+.sentBubble {
+	background: linear-gradient(135deg, #ff7a1a, #ff5b1a);
+	color: #fffaf4;
+}
+
+.receivedBubble {
+	background: rgba(255, 255, 255, 0.06);
+	color: #f4f6fb;
+}
+
+.metaStrip {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-top: 1.25rem;
+}
+
+.metaStrip span {
+	border-radius: 999px;
+	padding: 0.45rem 0.75rem;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.06);
+	color: #d7dce8;
+	font-size: 0.85rem;
+}
+
+@media screen and (max-width: 996px) {
+	.heroShell {
+		grid-template-columns: 1fr;
+	}
+
+	.heroCopy,
+	.heroCard {
+		border-radius: 22px;
+	}
+
+	.heroCopy {
+		padding: 1.35rem;
+	}
 }
